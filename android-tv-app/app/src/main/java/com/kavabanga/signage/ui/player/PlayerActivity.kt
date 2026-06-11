@@ -243,6 +243,9 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun checkAndSwitchContent() {
+        // Не прерываем активную загрузку
+        if (mediaCheckJob?.isActive == true) return
+
         val item = determineCurrentItem()
 
         if (item == null) {
