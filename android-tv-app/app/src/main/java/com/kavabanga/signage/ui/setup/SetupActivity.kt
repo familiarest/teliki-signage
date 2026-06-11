@@ -146,7 +146,7 @@ class SetupActivity : AppCompatActivity() {
 
     private fun loadScreens(location: Location) {
         binding.screensLabel.visibility = View.GONE
-        binding.screensScroll.visibility = View.GONE
+        binding.screensGrid.visibility = View.GONE
         binding.screensProgress.visibility = View.VISIBLE
         binding.btnSave.visibility = View.GONE
 
@@ -206,7 +206,7 @@ class SetupActivity : AppCompatActivity() {
 
         binding.screensProgress.visibility = View.GONE
         binding.screensLabel.visibility = View.VISIBLE
-        binding.screensScroll.visibility = View.VISIBLE
+        binding.screensGrid.visibility = View.VISIBLE
 
         for (preview in screenPreviews) {
             val card = LayoutInflater.from(this).inflate(R.layout.item_screen_card, grid, false)

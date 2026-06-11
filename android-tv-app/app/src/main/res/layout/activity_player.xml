@@ -42,16 +42,4 @@
             android:textSize="20sp" />
     </LinearLayout>
 
-    <!-- Debug status (удалить после отладки) -->
-    <TextView
-        android:id="@+id/debugText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="#AA000000"
-        android:padding="8dp"
-        android:textColor="#00FF00"
-        android:textSize="14sp"
-        android:visibility="visible" />
-
 </FrameLayout>
