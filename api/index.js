@@ -1,82 +1,82 @@
-// Vercel Serverless Proxy → Firebase Cloud Function
-// Обходит гео-блокировку Google доменов
-// Поддерживает стриминг больших файлов (видео)
-const https = require('https');
+// Vercel Edge Runtime Proxy → Firebase Cloud Function
+// Edge поддерживает стриминг больших файлов (видео)
+// и не имеет лимита на размер ответа
+
+export const config = { runtime: 'edge' };
 
 const FIREBASE_API = 'https://us-central1-kava-signage-2026.cloudfunctions.net/api';
 
-// Снимаем лимит на размер ответа
-module.exports.config = {
-  api: {
-    responseLimit: false,
-  },
-};
-
-module.exports = (req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-
-  // Собираем query string
-  const params = new URLSearchParams(req.query);
-  const qs = params.toString();
-  const targetUrl = qs ? `${FIREBASE_API}?${qs}` : FIREBASE_API;
-
-  if (req.method === 'GET') {
-    // Стримим ответ напрямую — без буферизации в памяти
-    https.get(targetUrl, (proxyRes) => {
-      res.status(proxyRes.statusCode);
-
-      // Пробрасываем заголовки
-      const ct = proxyRes.headers['content-type'];
-      if (ct) res.setHeader('Content-Type', ct);
-      const cl = proxyRes.headers['content-length'];
-      if (cl) res.setHeader('Content-Length', cl);
-
-      // Кэш: медиа на сутки, данные на 10 сек
-      if (req.query.media) {
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-      } else {
-        res.setHeader('Cache-Control', 'public, max-age=10');
-      }
-
-      // Стрим без буферизации
-      proxyRes.pipe(res);
-    }).on('error', (e) => {
-      console.error('Proxy GET error:', e.message);
-      res.status(502).json({ error: e.message });
-    });
-
-  } else if (req.method === 'POST') {
-    const postBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-    const parsed = new URL(targetUrl);
-    const options = {
-      hostname: parsed.hostname,
-      path: parsed.pathname + parsed.search,
-      method: 'POST',
+export default async function handler(request) {
+  // CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
       headers: {
-        'Content-Type': req.headers['content-type'] || 'application/json',
-        'Content-Length': Buffer.byteLength(postBody),
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
       },
-    };
-
-    const proxyReq = https.request(options, (proxyRes) => {
-      res.status(proxyRes.statusCode);
-      const ct = proxyRes.headers['content-type'];
-      if (ct) res.setHeader('Content-Type', ct);
-      proxyRes.pipe(res);
     });
-
-    proxyReq.on('error', (e) => {
-      console.error('Proxy POST error:', e.message);
-      res.status(502).json({ error: e.message });
-    });
-
-    proxyReq.write(postBody);
-    proxyReq.end();
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
   }
-};
+
+  const url = new URL(request.url);
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+
+  try {
+    // Медиа-прокси: стримим напрямую к Firebase Storage (обходя Cloud Function)
+    const mediaUrl = url.searchParams.get('media');
+    if (mediaUrl) {
+      // Качаем напрямую из Firebase Storage — Edge-серверы не заблокированы
+      const mediaResp = await fetch(mediaUrl);
+      if (!mediaResp.ok) {
+        return new Response(JSON.stringify({ error: `Media fetch failed: ${mediaResp.status}` }), {
+          status: mediaResp.status,
+          headers: { 'Content-Type': 'application/json', ...cors },
+        });
+      }
+      return new Response(mediaResp.body, {
+        status: 200,
+        headers: {
+          'Content-Type': mediaResp.headers.get('content-type') || 'application/octet-stream',
+          'Content-Length': mediaResp.headers.get('content-length') || '',
+          'Cache-Control': 'public, max-age=86400',
+          ...cors,
+        },
+      });
+    }
+
+    // POST запросы (upload/write)
+    if (request.method === 'POST') {
+      const qs = url.search || '';
+      const resp = await fetch(`${FIREBASE_API}${qs}`, {
+        method: 'POST',
+        headers: { 'Content-Type': request.headers.get('content-type') || 'application/json' },
+        body: request.body,
+      });
+      const body = await resp.text();
+      return new Response(body, {
+        status: resp.status,
+        headers: { 'Content-Type': 'application/json', ...cors },
+      });
+    }
+
+    // GET: Firestore data proxy
+    const path = url.searchParams.get('path') || 'locations';
+    const resp = await fetch(`${FIREBASE_API}?path=${encodeURIComponent(path)}`);
+    const body = await resp.text();
+    return new Response(body, {
+      status: resp.status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=10',
+        ...cors,
+      },
+    });
+
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+}
