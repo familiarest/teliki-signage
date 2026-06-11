@@ -22,6 +22,7 @@ class FirestoreRestClient {
 
         // Домены для перебора (от наименее блокируемого к наиболее)
         private val API_URLS = listOf(
+            "https://teliki-signage.vercel.app/api",
             "https://kava-signage-2026.web.app/api",
             "https://kava-signage-2026.firebaseapp.com/api",
             "https://us-central1-kava-signage-2026.cloudfunctions.net/api"

@@ -228,7 +228,7 @@ class SetupActivity : AppCompatActivity() {
                 // Для изображений загружаем через прокси (обход блокировки)
                 val imageUrl = if (preview.mediaUrl.contains("firebasestorage.googleapis.com")) {
                     val encoded = java.net.URLEncoder.encode(preview.mediaUrl, "UTF-8")
-                    "https://kava-signage-2026.web.app/api?media=$encoded"
+                    "https://teliki-signage.vercel.app/api?media=$encoded"
                 } else {
                     preview.mediaUrl
                 }
