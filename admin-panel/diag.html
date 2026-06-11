@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teliki — Диагностика</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f5f7; }
+    h1 { margin-bottom: 20px; }
+    .test { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .test h3 { margin-bottom: 8px; }
+    .test pre { background: #f0f0f0; padding: 10px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+    .ok { color: green; } .fail { color: red; } .wait { color: orange; }
+    button { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; background: #007AFF; color: white; cursor: pointer; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🔧 Диагностика Teliki</h1>
+  <button onclick="runAll()">Запустить все тесты</button>
+  <div id="results"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const results = document.getElementById('results');
+
+    function addTest(id, title) {
+      const div = document.createElement('div');
+      div.className = 'test';
+      div.id = id;
+      div.innerHTML = `<h3>${title}: <span class="wait">⏳ ждём...</span></h3><pre></pre>`;
+      results.appendChild(div);
+      return div;
+    }
+
+    function setResult(id, ok, text) {
+      const div = document.getElementById(id);
+      const span = div.querySelector('span');
+      span.className = ok ? 'ok' : 'fail';
+      span.textContent = ok ? '✅ OK' : '❌ ОШИБКА';
+      div.querySelector('pre').textContent = text;
+    }
+
+    async function runAll() {
+      results.innerHTML = '';
+
+      // Test 1: Basic network
+      const t1 = addTest('t1', 'Тест 1 — Интернет (google.com)');
+      try {
+        const r = await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
+        setResult('t1', true, 'Интернет работает');
+      } catch (e) {
+        setResult('t1', false, 'Нет интернета: ' + e.message);
+      }
+
+      // Test 2: Firestore REST API
+      const t2 = addTest('t2', 'Тест 2 — Firestore REST API (fetch)');
+      try {
+        const url = 'https://firestore.googleapis.com/v1/projects/kava-signage-2026/databases/(default)/documents/locations';
+        const r = await fetch(url);
+        const text = await r.text();
+        if (!r.ok) {
+          setResult('t2', false, `HTTP ${r.status}\n\n${text.substring(0, 500)}`);
+        } else {
+          const json = JSON.parse(text);
+          const docs = json.documents || [];
+          const names = docs.map(d => {
+            const f = d.fields || {};
+            return f.name ? f.name.stringValue : '?';
+          });
+          setResult('t2', true, `${docs.length} локаций найдено:\n${names.join('\n')}`);
+        }
+      } catch (e) {
+        setResult('t2', false, 'Fetch ошибка: ' + e.message + '\n\nВозможно firestore.googleapis.com заблокирован в вашем регионе');
+      }
+
+      // Test 3: Firebase SDK init
+      const t3 = addTest('t3', 'Тест 3 — Firebase SDK инициализация');
+      let db;
+      try {
+        const app = firebase.initializeApp({
+          apiKey: "AIzaSyA2KthBTD00xFbwVxvYhJgPyJ-GPLhQmyA",
+          authDomain: "kava-signage-2026.firebaseapp.com",
+          projectId: "kava-signage-2026",
+          storageBucket: "kava-signage-2026.firebasestorage.app",
+          messagingSenderId: "99606044465",
+          appId: "1:99606044465:web:34458e3f74fc50a3221a10"
+        }, 'diag');
+        db = firebase.firestore(app);
+        setResult('t3', true, 'Firebase SDK инициализирован');
+      } catch (e) {
+        setResult('t3', false, 'Ошибка инициализации: ' + e.message);
+        return;
+      }
+
+      // Test 4: SDK .get() without orderBy
+      const t4 = addTest('t4', 'Тест 4 — SDK .get() БЕЗ orderBy');
+      try {
+        const snap = await Promise.race([
+          db.collection('locations').get(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Таймаут 10 секунд')), 10000))
+        ]);
+        const names = snap.docs.map(d => d.data().name);
+        setResult('t4', true, `${snap.size} локаций:\n${names.join('\n')}`);
+      } catch (e) {
+        setResult('t4', false, 'SDK .get() ошибка: ' + e.message);
+      }
+
+      // Test 5: SDK .get() WITH orderBy (the original query)
+      const t5 = addTest('t5', 'Тест 5 — SDK .get() С orderBy("created_at")');
+      try {
+        const snap = await Promise.race([
+          db.collection('locations').orderBy('created_at', 'asc').get(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Таймаут 10 секунд')), 10000))
+        ]);
+        const names = snap.docs.map(d => d.data().name);
+        setResult('t5', true, `${snap.size} локаций:\n${names.join('\n')}`);
+      } catch (e) {
+        setResult('t5', false, 'SDK orderBy ошибка: ' + e.message + '\n\nЭто запрос из dashboard.js — если он падает, кофейни не показываются');
+      }
+
+      // Test 6: SDK onSnapshot
+      const t6 = addTest('t6', 'Тест 6 — SDK onSnapshot (realtime)');
+      try {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Таймаут 10 секунд — onSnapshot не ответил')), 10000);
+          db.collection('locations').orderBy('created_at', 'asc').onSnapshot(
+            (snap) => {
+              clearTimeout(timeout);
+              const names = snap.docs.map(d => d.data().name);
+              setResult('t6', true, `onSnapshot вернул ${snap.size} локаций:\n${names.join('\n')}`);
+              resolve();
+            },
+            (err) => {
+              clearTimeout(timeout);
+              setResult('t6', false, 'onSnapshot ошибка: ' + err.message);
+              reject(err);
+            }
+          );
+        });
+      } catch (e) {
+        setResult('t6', false, e.message);
+      }
+
+      // Test 7: Single doc read
+      const t7 = addTest('t7', 'Тест 7 — Чтение одной локации (Ак-Мечеть)');
+      try {
+        const doc = await Promise.race([
+          db.collection('locations').doc('M200wBGhHOGJxfhiHx2v').get(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Таймаут 10 секунд')), 10000))
+        ]);
+        if (doc.exists) {
+          setResult('t7', true, 'Ак-Мечеть найдена: ' + JSON.stringify(doc.data(), null, 2));
+        } else {
+          setResult('t7', false, 'Документ НЕ СУЩЕСТВУЕТ — doc.exists = false');
+        }
+      } catch (e) {
+        setResult('t7', false, 'Ошибка: ' + e.message);
+      }
+
+      // Test 8: Service Worker
+      const t8 = addTest('t8', 'Тест 8 — Service Worker');
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs.length > 0) {
+          const info = regs.map(r => `Scope: ${r.scope}, Active: ${r.active ? r.active.scriptURL : 'нет'}`);
+          setResult('t8', true, `${regs.length} SW зарегистрирован:\n${info.join('\n')}`);
+        } else {
+          setResult('t8', true, 'Нет SW (инкогнито?) — это нормально');
+        }
+      } catch (e) {
+        setResult('t8', true, 'SW не поддерживается: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

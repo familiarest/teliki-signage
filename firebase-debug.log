@@ -1,0 +1,146 @@
+[debug] [2026-06-11T08:40:07.517Z] ----------------------------------------------------------------------
+[debug] [2026-06-11T08:40:07.521Z] Command:       /Users/azizametov/Library/Caches/ms-playwright-go/1.57.0/node /Users/azizametov/.npm/_npx/7750544ccf494d8b/node_modules/firebase-tools/lib/bin/firebase.js deploy --only hosting --project kava-signage-2026
+[debug] [2026-06-11T08:40:07.521Z] CLI Version:   15.19.1
+[debug] [2026-06-11T08:40:07.521Z] Platform:      darwin
+[debug] [2026-06-11T08:40:07.521Z] Node Version:  v24.11.1
+[debug] [2026-06-11T08:40:07.521Z] Time:          Thu Jun 11 2026 11:40:07 GMT+0300 (Moscow Standard Time)
+[debug] [2026-06-11T08:40:07.522Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-11T08:40:09.511Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-11T08:40:09.511Z] > authorizing via signed-in user (probniyakk00001@gmail.com)
+[debug] [2026-06-11T08:40:09.511Z] [iam] checking project kava-signage-2026 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-06-11T08:40:09.512Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:09.512Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:09.513Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/kava-signage-2026:testIamPermissions [none]
+[debug] [2026-06-11T08:40:09.513Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/kava-signage-2026:testIamPermissions  x-goog-user-project=kava-signage-2026
+[debug] [2026-06-11T08:40:09.513Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kava-signage-2026:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-11T08:40:10.463Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/kava-signage-2026:testIamPermissions 200
+[debug] [2026-06-11T08:40:10.463Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kava-signage-2026:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-11T08:40:10.464Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:10.464Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:10.464Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/kava-signage-2026 [none]
+[debug] [2026-06-11T08:40:16.673Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/kava-signage-2026 200
+[debug] [2026-06-11T08:40:16.673Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/kava-signage-2026 {"projectId":"kava-signage-2026","projectNumber":"99606044465","displayName":"Kavabanga Signage","name":"projects/kava-signage-2026","resources":{"hostingSite":"kava-signage-2026"},"state":"ACTIVE","etag":"1_325113f7-2f8b-41de-a0ce-b4449c706142"}
+[info] 
+[info] === Deploying to 'kava-signage-2026'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-06-11T08:40:16.676Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:16.676Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:16.676Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kava-signage-2026/sites/kava-signage-2026 [none]
+[debug] [2026-06-11T08:40:18.187Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kava-signage-2026/sites/kava-signage-2026 200
+[debug] [2026-06-11T08:40:18.187Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kava-signage-2026/sites/kava-signage-2026 {"name":"projects/kava-signage-2026/sites/kava-signage-2026","defaultUrl":"https://kava-signage-2026.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-06-11T08:40:18.190Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:18.191Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:18.191Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions [none]
+[debug] [2026-06-11T08:40:18.191Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-06-11T08:40:19.878Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions 200
+[debug] [2026-06-11T08:40:19.878Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions {"name":"projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[kava-signage-2026]: beginning deploy... 
+[info] i  hosting[kava-signage-2026]: found 13 files in admin-panel 
+[debug] [2026-06-11T08:40:19.895Z] [hosting] uploading with 200 concurrency
+[debug] [2026-06-11T08:40:19.904Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:19.904Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:19.905Z] [hosting] hash cache [YWRtaW4tcGFuZWw] stored for 13 files
+[debug] [2026-06-11T08:40:19.905Z] [hosting][hash queue][FINAL] {"max":6,"min":0,"avg":1.2307692307692308,"active":0,"complete":13,"success":13,"errored":0,"retried":0,"total":13,"elapsed":9}
+[debug] [2026-06-11T08:40:19.906Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420:populateFiles [none]
+[debug] [2026-06-11T08:40:19.906Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420:populateFiles {"files":{"/manifest.json":"67faaa14705e2ffcccd0b186e8e80d22c97b169ebd78fa060613ac6ada7af887","/location.html":"1e5d0b041bbb2c1907374f43ea098561bf4787107b1b19a400c5312d2c84e27e","/index.html":"65632b6499087d5932e6db1410374d9821291269d47d906d5f1e00e56f9ae393","/diag.html":"6a9e690fb3c692f21fd5b1e548ab2240f94ca31b27423d0ffcd432a729ae1b77","/api.html":"909d49548ae8db05ef1c61e55d6cf285846605825d6b00044358d6467db0cadc","/js/firebase-config.js":"bcdd49a31d5a9f34cbe02bf6174c65f5e25280ab674c5286f1e01d333e0edbe9","/js/auth.js":"dd25c8dbc99223a178466a773978c6a2b4847874d2f07d8e88c772e2adbfd154","/css/styles.css":"98106e6e08f2c2b1c2f0937887ec38620241fe87604831d63e0d5d9e83d4fbaa","/assets/icon-512.png":"57cd3017bac2911030781e7a16cd7e8ce14d919d5e9be238fc0bc6105cffa7e9","/assets/icon-192.png":"57cd3017bac2911030781e7a16cd7e8ce14d919d5e9be238fc0bc6105cffa7e9","/sw.js":"2ff49061ee402dedc6fbe40fe3274231b3d54fb0b7ea71844eed0664fb362a0c","/js/dashboard.js":"08efe546c8da33496cd7f5e206fe66508771b91e307ea87ad3cbe7d36e05623b","/js/location.js":"bb374f24f2650bf36769b98ede275678a0f59e7155b6cc6a2387d6e669439920"}}
+[debug] [2026-06-11T08:40:20.839Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420:populateFiles 200
+[debug] [2026-06-11T08:40:20.839Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420:populateFiles {"uploadRequiredHashes":["2ff49061ee402dedc6fbe40fe3274231b3d54fb0b7ea71844eed0664fb362a0c","08efe546c8da33496cd7f5e206fe66508771b91e307ea87ad3cbe7d36e05623b","bb374f24f2650bf36769b98ede275678a0f59e7155b6cc6a2387d6e669439920"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files"}
+[debug] [2026-06-11T08:40:20.840Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:20.840Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:20.840Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:20.840Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:20.840Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:20.840Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:20.841Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/2ff49061ee402dedc6fbe40fe3274231b3d54fb0b7ea71844eed0664fb362a0c [none]
+[debug] [2026-06-11T08:40:20.841Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/2ff49061ee402dedc6fbe40fe3274231b3d54fb0b7ea71844eed0664fb362a0c [stream]
+[debug] [2026-06-11T08:40:20.850Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/08efe546c8da33496cd7f5e206fe66508771b91e307ea87ad3cbe7d36e05623b [none]
+[debug] [2026-06-11T08:40:20.850Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/08efe546c8da33496cd7f5e206fe66508771b91e307ea87ad3cbe7d36e05623b [stream]
+[debug] [2026-06-11T08:40:20.851Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/bb374f24f2650bf36769b98ede275678a0f59e7155b6cc6a2387d6e669439920 [none]
+[debug] [2026-06-11T08:40:20.851Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/bb374f24f2650bf36769b98ede275678a0f59e7155b6cc6a2387d6e669439920 [stream]
+[debug] [2026-06-11T08:40:20.852Z] [hosting][populate queue][FINAL] {"max":937,"min":937,"avg":937,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":949}
+[debug] [2026-06-11T08:40:20.853Z] [hosting] uploads queued: 3
+[info] i  hosting: uploading new files [0/3] (0%) 
+[debug] [2026-06-11T08:40:22.722Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/08efe546c8da33496cd7f5e206fe66508771b91e307ea87ad3cbe7d36e05623b 200
+[debug] [2026-06-11T08:40:22.722Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/08efe546c8da33496cd7f5e206fe66508771b91e307ea87ad3cbe7d36e05623b [stream]
+[debug] [2026-06-11T08:40:22.930Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/2ff49061ee402dedc6fbe40fe3274231b3d54fb0b7ea71844eed0664fb362a0c 200
+[debug] [2026-06-11T08:40:22.930Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/2ff49061ee402dedc6fbe40fe3274231b3d54fb0b7ea71844eed0664fb362a0c [stream]
+[debug] [2026-06-11T08:40:22.993Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/bb374f24f2650bf36769b98ede275678a0f59e7155b6cc6a2387d6e669439920 200
+[debug] [2026-06-11T08:40:22.993Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/kava-signage-2026/versions/48d89bb2d71b0420/files/bb374f24f2650bf36769b98ede275678a0f59e7155b6cc6a2387d6e669439920 [stream]
+[debug] [2026-06-11T08:40:22.993Z] [hosting][upload queue][FINAL] {"max":2153,"min":1882,"avg":2042,"active":0,"complete":3,"success":3,"errored":0,"retried":0,"total":3,"elapsed":2154}
+[info] i  hosting: upload complete 
+[info] ✔  hosting[kava-signage-2026]: file upload complete 
+[debug] [2026-06-11T08:40:22.994Z] [hosting] deploy completed after 3113ms
+[debug] [2026-06-11T08:40:22.994Z] [
+  {
+    "config": {
+      "site": "kava-signage-2026",
+      "public": "admin-panel",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/api",
+          "function": {
+            "functionId": "api"
+          }
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        }
+      ]
+    },
+    "version": "projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420"
+  }
+]
+[info] i  hosting[kava-signage-2026]: finalizing version... 
+[debug] [2026-06-11T08:40:22.995Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:22.995Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:22.995Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/kava-signage-2026/locations/-/functions [none]
+[debug] [2026-06-11T08:40:24.160Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/kava-signage-2026/locations/-/functions 200
+[debug] [2026-06-11T08:40:24.160Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/kava-signage-2026/locations/-/functions {}
+[debug] [2026-06-11T08:40:24.160Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:24.161Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:24.161Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/kava-signage-2026/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-06-11T08:40:25.501Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/kava-signage-2026/locations/-/functions 200
+[debug] [2026-06-11T08:40:25.501Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/kava-signage-2026/locations/-/functions {"functions":[{"name":"projects/kava-signage-2026/locations/us-central1/functions/api","buildConfig":{"build":"projects/99606044465/locations/us-central1/builds/17bc261e-6cc5-4784-a879-99ec62060d72","runtime":"nodejs20","entryPoint":"api","source":{"storageSource":{"bucket":"gcf-v2-sources-99606044465-us-central1","object":"api/function-source.zip","generation":"1780784037617804"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/kava-signage-2026/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-99606044465-us-central1","object":"api/function-source.zip","generation":"1780784037617804"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/kava-signage-2026/serviceAccounts/99606044465-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/kava-signage-2026/locations/us-central1/services/api","timeoutSeconds":120,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"kava-signage-2026\",\"storageBucket\":\"kava-signage-2026.firebasestorage.app\"}","GCLOUD_PROJECT":"kava-signage-2026","EVENTARC_CLOUD_EVENT_SOURCE":"projects/kava-signage-2026/locations/us-central1/services/api","FUNCTION_TARGET":"api","LOG_EXECUTION_ID":"true"},"maxInstanceCount":3,"ingressSettings":"ALLOW_ALL","uri":"https://api-fnrw5fx2ga-uc.a.run.app","serviceAccountEmail":"99606044465-compute@developer.gserviceaccount.com","availableMemory":"512Mi","allTrafficOnLatestRevision":true,"revision":"api-00004-tod","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2026-06-06T22:14:56.284680485Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"a6cf794af1414ed6293406e9027a3675613135fe"},"environment":"GEN_2","url":"https://us-central1-kava-signage-2026.cloudfunctions.net/api","createTime":"2026-06-05T14:05:43.464087713Z","satisfiesPzi":true}]}
+[debug] [2026-06-11T08:40:25.504Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:25.504Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:25.504Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions/48d89bb2d71b0420 updateMask=status%2Cconfig
+[debug] [2026-06-11T08:40:25.504Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions/48d89bb2d71b0420 {"status":"FINALIZED","config":{"rewrites":[{"glob":"/api","run":{"serviceId":"api","region":"us-central1"}}],"headers":[{"glob":"**/*.@(js|css)","headers":{"Cache-Control":"no-cache"}}]}}
+[debug] [2026-06-11T08:40:27.354Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions/48d89bb2d71b0420 200
+[debug] [2026-06-11T08:40:27.354Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/versions/48d89bb2d71b0420 {"name":"projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"no-cache"},"glob":"**/*.@(js|css)"}],"rewrites":[{"glob":"/api","run":{"serviceId":"api","region":"us-central1"}}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-06-11T08:40:18.783626Z","createUser":{"email":"probniyakk00001@gmail.com"},"finalizeTime":"2026-06-11T08:40:27.278364Z","finalizeUser":{"email":"probniyakk00001@gmail.com"}}
+[debug] [2026-06-11T08:40:27.354Z] [hosting] finalized version for kava-signage-2026:[object Object]
+[info] ✔  hosting[kava-signage-2026]: version finalized 
+[info] i  hosting[kava-signage-2026]: releasing new version... 
+[debug] [2026-06-11T08:40:27.355Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:27.355Z] Checked if tokens are valid: true, expires at: 1781168463698
+[debug] [2026-06-11T08:40:27.355Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/channels/live/releases versionName=projects%2F99606044465%2Fsites%2Fkava-signage-2026%2Fversions%2F48d89bb2d71b0420
+[debug] [2026-06-11T08:40:27.355Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/channels/live/releases {}
+[debug] [2026-06-11T08:40:28.919Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/channels/live/releases 200
+[debug] [2026-06-11T08:40:28.919Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/kava-signage-2026/channels/live/releases {"name":"projects/99606044465/sites/kava-signage-2026/channels/live/releases/1781167227903000","version":{"name":"projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"no-cache"},"glob":"**/*.@(js|css)"}],"rewrites":[{"glob":"/api","run":{"serviceId":"api","region":"us-central1"}}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-06-11T08:40:18.783626Z","createUser":{"email":"probniyakk00001@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocL3hNpD1Zn0Lr5IET08ilawJua_hCkGjDJcTDkfsUdUaLZMuw=mo"},"finalizeTime":"2026-06-11T08:40:27.278364Z","finalizeUser":{"email":"probniyakk00001@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocL3hNpD1Zn0Lr5IET08ilawJua_hCkGjDJcTDkfsUdUaLZMuw=mo"}},"type":"DEPLOY","releaseTime":"2026-06-11T08:40:27.903Z","releaseUser":{"email":"probniyakk00001@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocL3hNpD1Zn0Lr5IET08ilawJua_hCkGjDJcTDkfsUdUaLZMuw=mo"}}
+[debug] [2026-06-11T08:40:28.919Z] [hosting] release: {"name":"projects/99606044465/sites/kava-signage-2026/channels/live/releases/1781167227903000","version":{"name":"projects/99606044465/sites/kava-signage-2026/versions/48d89bb2d71b0420","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"no-cache"},"glob":"**/*.@(js|css)"}],"rewrites":[{"glob":"/api","run":{"serviceId":"api","region":"us-central1"}}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-06-11T08:40:18.783626Z","createUser":{"email":"probniyakk00001@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocL3hNpD1Zn0Lr5IET08ilawJua_hCkGjDJcTDkfsUdUaLZMuw=mo"},"finalizeTime":"2026-06-11T08:40:27.278364Z","finalizeUser":{"email":"probniyakk00001@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocL3hNpD1Zn0Lr5IET08ilawJua_hCkGjDJcTDkfsUdUaLZMuw=mo"}},"type":"DEPLOY","releaseTime":"2026-06-11T08:40:27.903Z","releaseUser":{"email":"probniyakk00001@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocL3hNpD1Zn0Lr5IET08ilawJua_hCkGjDJcTDkfsUdUaLZMuw=mo"}}
+[info] ✔  hosting[kava-signage-2026]: release complete 
+[info] 
+[info] ✔  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/kava-signage-2026/overview
+[info] Hosting URL: https://kava-signage-2026.web.app
+[debug] [2026-06-11T08:40:38.927Z] Error: Timed out.
+    at Timeout._onTimeout (/Users/azizametov/.npm/_npx/7750544ccf494d8b/node_modules/firebase-tools/lib/utils.js:310:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.

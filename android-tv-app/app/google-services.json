@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "99606044465",
+    "project_id": "kava-signage-2026",
+    "storage_bucket": "kava-signage-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:99606044465:android:c457fcc70034aa37221a10",
+        "android_client_info": {
+          "package_name": "com.kavabanga.signage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOc7tmc07gwubPuruA09ALKyi_wglv9bs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

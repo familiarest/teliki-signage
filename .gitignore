@@ -1,0 +1,11 @@
+node_modules/
+.gradle/
+build/
+*.apk
+.DS_Store
+.firebase/
+backups/
+android-tv-app/app/build/
+android-tv-app/.gradle/
+android-tv-app/local.properties
+functions/node_modules/

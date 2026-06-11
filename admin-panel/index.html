@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#007AFF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Teliki">
+  <meta name="description" content="Teliki — Digital Signage Admin Panel">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <title>Teliki — Digital Signage</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ── Auth Overlay ────────────────────────────────────────── -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-logo">Teliki</div>
+      <p class="auth-subtitle">Digital Signage</p>
+      <form id="authForm" autocomplete="off">
+        <input
+          type="password"
+          class="input"
+          id="authPassword"
+          placeholder="Введите пароль…"
+          autocomplete="off"
+        >
+        <span class="auth-error" id="authError"></span>
+        <button type="submit" class="btn btn-primary auth-btn">Войти</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── App Content (hidden until auth) ────────────────────── -->
+  <div id="appContent" style="display:none">
+
+  <!-- ── Navbar ──────────────────────────────────────────────── -->
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <span class="navbar-logo">Teliki</span>
+      <span class="navbar-subtitle">Digital Signage</span>
+    </a>
+  </nav>
+
+  <!-- ── Page Content ────────────────────────────────────────── -->
+  <main class="page-content">
+    <header class="page-header">
+      <h1 class="page-title">Кофейни</h1>
+      <p class="page-subtitle">Управление локациями и экранами</p>
+    </header>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <button class="btn btn-primary" id="btnAddLocation">
+        <span>＋</span> Добавить кофейню
+      </button>
+      <button class="btn btn-secondary" id="btnSeed">
+        <span>⚡</span> Инициализировать базу
+      </button>
+    </div>
+
+    <!-- Skeleton Loading -->
+    <div class="cards-grid" id="skeletonGrid">
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+
+    <!-- Location Cards Grid -->
+    <div class="cards-grid hidden" id="locationsGrid"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state hidden" id="emptyState">
+      <span class="empty-state__icon">📺</span>
+      <h3 class="empty-state__title">Нет кофеен</h3>
+      <p class="empty-state__text">
+        Добавьте первую кофейню или нажмите «Инициализировать базу» для создания стандартного набора
+      </p>
+    </div>
+  </main>
+
+  <!-- ── Add Location Modal ──────────────────────────────────── -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h2 class="modal__title">Новая кофейня</h2>
+      <p class="modal__description">Введите название локации</p>
+      <input
+        type="text"
+        class="input"
+        id="locationNameInput"
+        placeholder="Название кофейни…"
+        autocomplete="off"
+      >
+      <div class="modal__actions">
+        <button class="btn btn-secondary" id="btnCancelModal">Отмена</button>
+        <button class="btn btn-primary" id="btnConfirmAdd">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /appContent -->
+
+  <!-- ── Toast Container ─────────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ── Auth Script (before Firebase) ───────────────────────── -->
+  <script src="js/auth.js"></script>
+
+  <!-- ── Firebase SDK (v10 Compat) ───────────────────────────── -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/dashboard.js"></script>
+
+  <!-- ── Service Worker Registration ─────────────────────────── -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('[Teliki] SW registered:', reg.scope))
+          .catch(err => console.warn('[Teliki] SW registration failed:', err));
+      });
+    }
+  </script>
+
+</body>
+</html>

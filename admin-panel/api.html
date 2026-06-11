@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA2KthBTD00xFbwVxvYhJgPyJ-GPLhQmyA",
+  authDomain: "kava-signage-2026.firebaseapp.com",
+  projectId: "kava-signage-2026",
+  storageBucket: "kava-signage-2026.firebasestorage.app",
+  messagingSenderId: "99606044465",
+  appId: "1:99606044465:web:34458e3f74fc50a3221a10"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+async function handleRequest() {
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+
+  let result;
+
+  if (action === 'locations') {
+    const snap = await db.collection('locations').get();
+    result = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  else if (action === 'screens') {
+    const locationId = params.get('locationId');
+    if (!locationId) { result = { error: 'missing locationId' }; }
+    else {
+      const snap = await db.collection('locations').doc(locationId).collection('screens').get();
+      result = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+  }
+  else {
+    result = { error: 'unknown action', usage: '?action=locations or ?action=screens&locationId=XXX' };
+  }
+
+  // Convert Firestore Timestamps to ISO strings
+  result = JSON.parse(JSON.stringify(result, (key, value) => {
+    if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+      return new Date(value.seconds * 1000).toISOString();
+    }
+    return value;
+  }));
+
+  document.body.textContent = JSON.stringify(result);
+  document.title = 'done';
+}
+
+handleRequest().catch(e => {
+  document.body.textContent = JSON.stringify({ error: e.message });
+  document.title = 'done';
+});
+</script>
+</body>
+</html>

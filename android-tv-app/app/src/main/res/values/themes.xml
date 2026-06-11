@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme — Apple Light style matching web app -->
+    <style name="Theme.KavabangaSignage" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">#f5f5f7</item>
+        <item name="colorPrimary">#007AFF</item>
+        <item name="colorPrimaryDark">#0066DD</item>
+        <item name="colorAccent">#007AFF</item>
+        <item name="android:textColorPrimary">#1d1d1f</item>
+        <item name="android:textColorSecondary">#6e6e73</item>
+        <item name="android:colorBackground">#f5f5f7</item>
+    </style>
+
+    <!-- Fullscreen theme for PlayerActivity -->
+    <style name="Theme.KavabangaSignage.Fullscreen">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+    </style>
+
+</resources>

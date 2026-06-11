@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="background">#FF0D0D11</color>
+    <color name="card_background">#FF1A1A2E</color>
+    <color name="primary">#FF8B5CF6</color>
+    <color name="primary_dark">#FF6D28D9</color>
+    <color name="text_secondary">#FFA1A1AA</color>
+    <color name="spinner_bg">#FF27272A</color>
+    <color name="focus_border">#FF8B5CF6</color>
+</resources>

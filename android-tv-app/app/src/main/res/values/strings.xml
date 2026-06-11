@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Teliki</string>
+
+    <!-- Setup Screen -->
+    <string name="label_location">Локация</string>
+    <string name="label_slot">Номер экрана</string>
+    <string name="btn_save">Сохранить и начать</string>
+    <string name="select_location">Выберите локацию</string>
+    <string name="no_locations_found">Локации не найдены. Проверьте интернет-соединение</string>
+    <string name="error_loading_locations">Ошибка загрузки локаций</string>
+    <string name="btn_retry">Повторить</string>
+
+    <!-- Player Screen -->
+    <string name="no_content">Нет контента</string>
+    <string name="content_media">Медиа контент</string>
+    <string name="btn_back">Назад</string>
+    <string name="loading">Загрузка…</string>
+</resources>
