@@ -260,12 +260,28 @@ class PlayerActivity : AppCompatActivity() {
         mediaCheckJob?.cancel()
         mediaCheckJob = lifecycleScope.launch {
             try {
+                showLoading(item.fileName)
                 displayMedia(item)
+                hideLoading()
                 currentMediaUrl = item.mediaUrl
             } catch (e: Exception) {
                 Log.e(TAG, "Error displaying media: ${e.message}", e)
+                hideLoading()
                 tryShowCached(item)
             }
+        }
+    }
+
+    private fun showLoading(fileName: String) {
+        runOnUiThread {
+            binding.loadingLayout.visibility = View.VISIBLE
+            binding.loadingText.text = "Загрузка: $fileName"
+        }
+    }
+
+    private fun hideLoading() {
+        runOnUiThread {
+            binding.loadingLayout.visibility = View.GONE
         }
     }
 
