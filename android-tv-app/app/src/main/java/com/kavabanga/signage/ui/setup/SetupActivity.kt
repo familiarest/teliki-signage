@@ -70,6 +70,9 @@ class SetupActivity : AppCompatActivity() {
         binding = ActivitySetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Показываем логи REST-клиента на экране
+        restClient.logListener = { msg -> log(msg) }
+
         log("🚀 Запуск. Загрузка локаций...")
         loadLocations()
         setupSaveButton()
@@ -91,8 +94,6 @@ class SetupActivity : AppCompatActivity() {
     private fun loadLocations() {
         binding.progressBar.visibility = View.VISIBLE
         binding.contentLayout.visibility = View.GONE
-
-        log("📡 Запрос: cloudfunctions.net/api?path=locations")
 
         restClient.getCollection("locations",
             onSuccess = { docs ->
