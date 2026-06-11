@@ -18,7 +18,17 @@
     "rewrites": [
       {
         "source": "/api",
-        "function": "api"
+        "function": {
+          "functionId": "api",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/**",
+        "function": {
+          "functionId": "api",
+          "region": "us-central1"
+        }
       }
     ],
     "headers": [

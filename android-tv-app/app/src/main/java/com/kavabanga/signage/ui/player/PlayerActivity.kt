@@ -53,6 +53,7 @@ class PlayerActivity : AppCompatActivity() {
     private var exoPlayer: ExoPlayer? = null
     private var currentMediaUrl: String = ""
     private var currentSchedule: List<ScheduleItem> = emptyList()
+    private var debugInfo = StringBuilder()
     private var wakeLock: PowerManager.WakeLock? = null
 
     private val handler = Handler(Looper.getMainLooper())
@@ -154,12 +155,25 @@ class PlayerActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun updateDebug(msg: String) {
+        debugInfo.appendLine(msg)
+        // Показываем последние 6 строк
+        val lines = debugInfo.lines().takeLast(6).joinToString("\n")
+        runOnUiThread {
+            try { binding.debugText.text = lines } catch (_: Exception) {}
+        }
+    }
+
     private fun startPolling() {
         val locationId = prefsManager.getLocationId()
         val slotNumber = prefsManager.getSlotNumber()
 
+        updateDebug("Location=$locationId, slot=$slotNumber")
+        updateDebug("URL: us-central1-kava-signage-2026.cloudfunctions.net")
+
         if (locationId == null) {
             Log.e(TAG, "No location configured!")
+            updateDebug("❌ Location не настроен!")
             showNoContent()
             return
         }
@@ -176,16 +190,23 @@ class PlayerActivity : AppCompatActivity() {
     private fun pollScreen() {
         val locationId = prefsManager.getLocationId() ?: return
         val slotNumber = prefsManager.getSlotNumber()
+        updateDebug("⏳ Запрос данных... loc=$locationId slot=$slotNumber")
 
         repository.fetchScreen(locationId, slotNumber) { screen ->
-            if (screen == null || screen.schedule.isEmpty()) {
-                Log.w(TAG, "No screen data or empty schedule")
-                if (currentSchedule.isEmpty()) {
-                    showNoContent()
-                }
+            if (screen == null) {
+                updateDebug("❌ Ответ: null (нет данных и нет кэша)")
+                if (currentSchedule.isEmpty()) showNoContent()
                 return@fetchScreen
             }
-
+            if (screen.schedule.isEmpty()) {
+                updateDebug("⚠️ Расписание пустое (0 элементов)")
+                if (currentSchedule.isEmpty()) showNoContent()
+                return@fetchScreen
+            }
+            updateDebug("✅ Получено: ${screen.schedule.size} элементов")
+            for (item in screen.schedule) {
+                updateDebug("  📄 ${item.fileName} (${item.mediaType})")
+            }
             onScheduleReceived(screen)
         }
     }

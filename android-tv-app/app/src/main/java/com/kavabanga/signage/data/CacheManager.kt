@@ -157,7 +157,7 @@ class CacheManager(private val context: Context) {
         // Route through Cloud Function proxy which runs in us-central1 (no geo-block)
         if (url.contains("firebasestorage.googleapis.com")) {
             val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-            return "https://us-central1-kava-signage-2026.cloudfunctions.net/api?media=$encoded"
+            return "https://kava-signage-2026.web.app/api?media=$encoded"
         }
         return url
     }

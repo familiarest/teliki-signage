@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="200dp"
+    android:layout_height="140dp"
+    android:layout_marginEnd="12dp"
+    android:background="@drawable/card_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <!-- Thumbnail image -->
+    <ImageView
+        android:id="@+id/screenThumb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="Screen thumbnail" />
+
+    <!-- Empty state icon -->
+    <TextView
+        android:id="@+id/screenEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="📭"
+        android:textSize="32sp"
+        android:visibility="gone" />
+
+    <!-- Bottom label overlay -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#CC000000"
+        android:orientation="vertical"
+        android:padding="6dp">
+
+        <TextView
+            android:id="@+id/screenLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Экран 1"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/screenInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Пусто"
+            android:textColor="#AAAAAA"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+
+    <!-- Selection border -->
+    <View
+        android:id="@+id/screenSelected"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/selected_border"
+        android:visibility="gone" />
+
+</FrameLayout>

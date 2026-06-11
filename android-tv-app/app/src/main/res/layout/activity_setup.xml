@@ -2,35 +2,33 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#f5f5f7">
+    android:background="#1a1a1a">
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
 
-        <!-- Main content -->
         <LinearLayout
             android:id="@+id/contentLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Logo area -->
+            <!-- Logo + Title -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:layout_marginBottom="32dp">
+                android:layout_marginBottom="24dp">
 
-                <!-- App icon circle -->
                 <FrameLayout
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:layout_marginBottom="12dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="8dp"
                     android:background="@drawable/icon_circle">
                     <TextView
                         android:layout_width="wrap_content"
@@ -38,109 +36,121 @@
                         android:layout_gravity="center"
                         android:text="T"
                         android:textColor="#FFFFFF"
-                        android:textSize="28sp"
+                        android:textSize="24sp"
                         android:textStyle="bold" />
                 </FrameLayout>
 
-                <!-- Title -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/app_name"
-                    android:textColor="#1d1d1f"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:gravity="center" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
 
-                <!-- Subtitle -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Настройка экрана"
-                    android:textColor="#6e6e73"
-                    android:textSize="15sp"
-                    android:gravity="center" />
+                    android:text="Выберите кофейню и экран"
+                    android:textColor="#888888"
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Setup Card -->
-            <LinearLayout
+            <!-- Location Spinner -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:text="КОФЕЙНЯ"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/spinnerLocation"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/spinner_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:popupBackground="#2a2a2a" />
+
+            <!-- Screen thumbnails label -->
+            <TextView
+                android:id="@+id/screensLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="ЭКРАНЫ"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- Screen thumbnails grid (horizontal scroll) -->
+            <HorizontalScrollView
+                android:id="@+id/screensScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/card_background"
-                android:elevation="2dp"
-                android:orientation="vertical"
-                android:padding="24dp">
+                android:layout_marginBottom="20dp"
+                android:scrollbars="none"
+                android:visibility="gone">
 
-                <!-- Location label -->
-                <TextView
+                <LinearLayout
+                    android:id="@+id/screensGrid"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/label_location"
-                    android:textColor="#6e6e73"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
 
-                <!-- Location Spinner -->
-                <Spinner
-                    android:id="@+id/spinnerLocation"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginBottom="20dp"
-                    android:background="@drawable/spinner_background"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:nextFocusDown="@id/spinnerSlot"
-                    android:popupBackground="#ffffff" />
+            <!-- Loading screens indicator -->
+            <ProgressBar
+                android:id="@+id/screensProgress"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:layout_marginBottom="16dp"
+                android:indeterminate="true"
+                android:indeterminateTint="#007AFF"
+                android:visibility="gone" />
 
-                <!-- Slot label -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/label_slot"
-                    android:textColor="#6e6e73"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <!-- Slot Spinner -->
-                <Spinner
-                    android:id="@+id/spinnerSlot"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginBottom="24dp"
-                    android:background="@drawable/spinner_background"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:nextFocusDown="@id/btnSave"
-                    android:nextFocusUp="@id/spinnerLocation"
-                    android:popupBackground="#ffffff" />
-
-                <!-- Save Button -->
-                <Button
-                    android:id="@+id/btnSave"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:background="@drawable/button_background"
-                    android:focusable="true"
-                    android:nextFocusUp="@id/spinnerSlot"
-                    android:text="Запустить"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
+            <!-- Save Button -->
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/button_background"
+                android:focusable="true"
+                android:text="Запустить"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
 
             <!-- Footer -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:text="Нажмите «Назад» на пульте для возврата"
+                android:textColor="#555555"
+                android:textSize="11sp" />
+
+            <!-- Debug Log -->
+            <TextView
+                android:id="@+id/debugLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Нажмите «Назад» на пульте для возврата в это меню"
-                android:textColor="#a1a1a6"
-                android:textSize="12sp"
-                android:gravity="center" />
+                android:background="#11FFFFFF"
+                android:fontFamily="monospace"
+                android:padding="10dp"
+                android:textColor="#00FF00"
+                android:textSize="11sp"
+                android:text="Инициализация..." />
 
         </LinearLayout>
     </ScrollView>

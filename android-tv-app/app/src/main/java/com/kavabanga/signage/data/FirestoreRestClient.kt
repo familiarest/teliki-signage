@@ -20,7 +20,7 @@ class FirestoreRestClient {
     companion object {
         private const val TAG = "FirestoreRest"
         // Direct Cloud Function URL — always works
-        private const val PROXY_URL = "https://us-central1-kava-signage-2026.cloudfunctions.net/api"
+        private const val PROXY_URL = "https://kava-signage-2026.web.app/api"
     }
 
     private val executor = Executors.newSingleThreadExecutor()
