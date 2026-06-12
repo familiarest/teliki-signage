@@ -33,10 +33,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.time.LocalDate
 import java.time.LocalTime
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class PlayerActivity : AppCompatActivity() {
@@ -44,8 +41,7 @@ class PlayerActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "PlayerActivity"
         private const val SCHEDULE_CHECK_INTERVAL_MS = 30_000L  // Переключение контента по расписанию
-        private const val DAILY_CHECK_INTERVAL_MS = 3_600_000L  // Проверка раз в час — нужна ли синхронизация
-        private const val SYNC_HOUR = 9  // Синхронизация в 9:00
+        private const val UPDATE_CHECK_INTERVAL_MS = 600_000L  // Проверка обновлений каждые 10 минут
         private const val CROSSFADE_DURATION_MS = 500L
     }
 
@@ -73,11 +69,11 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    // Ежечасная проверка — пора ли синхронизировать (в 9:00)
-    private val dailySyncChecker = object : Runnable {
+    // Периодическая проверка обновлений контента (каждые 10 минут)
+    private val updateChecker = object : Runnable {
         override fun run() {
             checkIfSyncNeeded()
-            handler.postDelayed(this, DAILY_CHECK_INTERVAL_MS)
+            handler.postDelayed(this, UPDATE_CHECK_INTERVAL_MS)
         }
     }
 
@@ -178,8 +174,8 @@ class PlayerActivity : AppCompatActivity() {
         // 2. Проверяем нужна ли синхронизация
         checkIfSyncNeeded()
 
-        // 3. Запускаем ежечасную проверку на синхронизацию
-        handler.postDelayed(dailySyncChecker, DAILY_CHECK_INTERVAL_MS)
+        // 3. Запускаем периодическую проверку обновлений
+        handler.postDelayed(updateChecker, UPDATE_CHECK_INTERVAL_MS)
     }
 
     /**
@@ -208,35 +204,12 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     /**
-     * Проверяет нужна ли синхронизация:
-     * - Если ни разу не синхронизировались → да
-     * - Если сейчас >= 9:00 и последняя синхронизация была до 9:00 сегодня → да
+     * Проверка обновлений — вызывается каждые 10 минут.
+     * Запрос расписания лёгкий (~1 КБ), медиа скачивается только при изменении.
      */
     private fun checkIfSyncNeeded() {
-        val now = LocalDateTime.now()
-        val lastSync = prefsManager.getLastSyncTime()
-        val todaySync9am = now.toLocalDate()
-            .atTime(SYNC_HOUR, 0)
-            .atZone(ZoneId.systemDefault())
-            .toInstant().toEpochMilli()
-
-        if (lastSync == 0L) {
-            // Никогда не синхронизировались
-            Log.i(TAG, "Первая синхронизация")
-            syncFromServer()
-        } else if (now.hour >= SYNC_HOUR && lastSync < todaySync9am) {
-            // Сегодня после 9:00, а последняя синхронизация была до 9:00
-            Log.i(TAG, "Ежедневная синхронизация (9:00)")
-            syncFromServer()
-        } else {
-            val nextSync = if (now.hour >= SYNC_HOUR) {
-                // Сегодня уже синхронизировались — следующая завтра в 9:00
-                now.toLocalDate().plusDays(1).atTime(SYNC_HOUR, 0)
-            } else {
-                now.toLocalDate().atTime(SYNC_HOUR, 0)
-            }
-            Log.i(TAG, "Синхронизация не нужна. Следующая: $nextSync")
-        }
+        Log.i(TAG, "⏰ Проверка обновлений...")
+        syncFromServer()
     }
 
     /**
@@ -252,9 +225,18 @@ class PlayerActivity : AppCompatActivity() {
                 if (currentSchedule.isEmpty()) showNoContent()
                 return@fetchScreen
             }
-            // Сохраняем время синхронизации
+
+            // Проверяем изменилось ли расписание
+            val newUrls = screen.schedule.map { it.mediaUrl }.toSet()
+            val oldUrls = currentSchedule.map { it.mediaUrl }.toSet()
+
+            if (newUrls == oldUrls && currentSchedule.isNotEmpty()) {
+                Log.i(TAG, "✅ Контент актуален, обновление не требуется")
+                return@fetchScreen
+            }
+
+            Log.i(TAG, "🔄 Обнаружен новый контент! Обновляем...")
             prefsManager.saveLastSyncTime(System.currentTimeMillis())
-            Log.i(TAG, "✅ Синхронизация завершена: ${screen.schedule.size} элементов")
             onScheduleReceived(screen)
         }
     }
@@ -499,7 +481,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(scheduleChecker)
-        handler.removeCallbacks(dailySyncChecker)
+        handler.removeCallbacks(updateChecker)
         mediaCheckJob?.cancel()
         releasePlayer()
         // Release WakeLock

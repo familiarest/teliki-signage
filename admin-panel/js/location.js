@@ -22,6 +22,7 @@
   const slotsGrid = document.getElementById('slotsGrid');
   const chainEditorContainer = document.getElementById('chainEditorContainer');
   const toastContainer = document.getElementById('toastContainer');
+  const btnDeploy = document.getElementById('btnDeploy');
 
   // ── State ──────────────────────────────────────────────────
   let currentSlot = null;       // currently selected slot number (1-5)
@@ -184,6 +185,9 @@
       console.error('[Teliki] Error loading slots:', err);
       showToast('Ошибка загрузки экранов', 'error');
     }
+
+    // Показываем кнопку «Выгрузить»
+    btnDeploy.style.display = '';
   }
 
   // ── Open Slot Editor ───────────────────────────────────────
@@ -714,6 +718,40 @@
 
   // ── Expose close for inline onclick ────────────────────────
   window.__teliki = { closeEditor };
+
+  // ── Deploy to TVs ─────────────────────────────────────────
+  async function deployToTVs() {
+    btnDeploy.disabled = true;
+    btnDeploy.textContent = '⏳ Выгружаю...';
+
+    try {
+      // Обновляем updated_at на всех экранах этой локации
+      const resp = await fetch(`${API_BASE}?path=locations/${locationId}/screens`);
+      if (!resp.ok) throw new Error('Не удалось получить экраны');
+      const json = await resp.json();
+      const docs = json.documents || [];
+
+      for (const doc of docs) {
+        const docId = doc.name.split('/').pop();
+        const docPath = `locations/${locationId}/screens/${docId}`;
+        await fetch(`${API_BASE}?write=${encodeURIComponent(docPath)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updated_at: '__SERVER_TIMESTAMP__' })
+        });
+      }
+
+      showToast('Выгружено! ТВ обновятся в течение 10 минут', 'success');
+    } catch (err) {
+      console.error('[Teliki] Deploy error:', err);
+      showToast('Ошибка выгрузки: ' + err.message, 'error');
+    }
+
+    btnDeploy.disabled = false;
+    btnDeploy.textContent = '📡 Выгрузить на телевизоры';
+  }
+
+  btnDeploy.addEventListener('click', deployToTVs);
 
   // ── Init ───────────────────────────────────────────────────
   async function init() {
