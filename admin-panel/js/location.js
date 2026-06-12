@@ -473,9 +473,9 @@
       return;
     }
 
-    // Video size limit: 50 MB
-    if (type === 'video' && file.size > 50 * 1024 * 1024) {
-      showToast('Видео не должно превышать 50 МБ', 'warning');
+    // Video size limit: 100 MB
+    if (type === 'video' && file.size > 100 * 1024 * 1024) {
+      showToast('Видео не должно превышать 100 МБ', 'warning');
       return;
     }
 
@@ -539,31 +539,41 @@
         let mediaUrl = media.media_url;
 
         if (pendingFiles[i]) {
-          // Upload file via Cloud Function proxy
+          // Загрузка напрямую в Firebase Storage (без лимита размера)
           const file = pendingFiles[i];
           const timestamp = Date.now();
           const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-          const path = `media/${locationId}/slot_${currentSlot}/${timestamp}_${safeName}`;
+          const storagePath = `media/${locationId}/slot_${currentSlot}/${timestamp}_${safeName}`;
 
-          // Show progress bar
+          // Показываем прогресс-бар
           const progressBar = document.getElementById(`progress-${i}`);
           const progressFill = document.getElementById(`progressFill-${i}`);
           if (progressBar) progressBar.classList.remove('hidden');
-          if (progressFill) progressFill.style.width = '10%';
 
-          const uploadResp = await fetch(`${API_BASE}?upload=${encodeURIComponent(path)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': file.type || 'application/octet-stream' },
-            body: file
-          });
+          try {
+            mediaUrl = await uploadToStorage(file, storagePath, (percent) => {
+              if (progressFill) progressFill.style.width = percent + '%';
+            });
+          } catch (uploadErr) {
+            // Фоллбэк: если прямая загрузка не удалась, пробуем через Cloud Function
+            console.warn('[Teliki] Direct upload failed, trying proxy:', uploadErr.message);
+            if (progressFill) progressFill.style.width = '10%';
 
-          if (!uploadResp.ok) {
-            const errData = await uploadResp.json().catch(() => ({}));
-            throw new Error(errData.error || 'Upload failed');
+            const uploadResp = await fetch(`${API_BASE}?upload=${encodeURIComponent(storagePath)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': file.type || 'application/octet-stream' },
+              body: file
+            });
+
+            if (!uploadResp.ok) {
+              const errData = await uploadResp.json().catch(() => ({}));
+              throw new Error(errData.error || 'Upload failed');
+            }
+
+            const result = await uploadResp.json();
+            mediaUrl = result.url || result.publicUrl;
           }
 
-          const result = await uploadResp.json();
-          mediaUrl = result.url || result.publicUrl;
           if (progressFill) progressFill.style.width = '100%';
         }
 
@@ -714,6 +724,50 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // ── Direct Firebase Storage Upload (через signed URL) ───
+  // 1. Получаем signed URL от Cloud Function (маленький запрос)
+  // 2. Грузим файл напрямую в Storage (без лимита, с прогрессом)
+  async function uploadToStorage(file, storagePath, onProgress) {
+    // Шаг 1: получаем signed URL
+    const ct = file.type || 'application/octet-stream';
+    const signResp = await fetch(
+      `${API_BASE}?signedUpload=${encodeURIComponent(storagePath)}&contentType=${encodeURIComponent(ct)}`
+    );
+    if (!signResp.ok) throw new Error('Не удалось получить ссылку для загрузки');
+    const { uploadUrl } = await signResp.json();
+
+    // Шаг 2: загружаем файл напрямую с реальным прогрессом
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', ct);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`Upload HTTP ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error('Ошибка сети при загрузке'));
+      xhr.ontimeout = () => reject(new Error('Таймаут загрузки'));
+      xhr.timeout = 600000; // 10 минут
+
+      xhr.send(file);
+    });
+
+    // Шаг 3: получаем download URL
+    const dlResp = await fetch(
+      `${API_BASE}?downloadUrl=${encodeURIComponent(storagePath)}`
+    );
+    if (!dlResp.ok) throw new Error('Не удалось получить ссылку на файл');
+    const { url } = await dlResp.json();
+    return url;
   }
 
   // ── Expose close for inline onclick ────────────────────────

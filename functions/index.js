@@ -11,6 +11,47 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/
 
 exports.api = onRequest({cors: true, region: "us-central1", memory: "512MiB", timeoutSeconds: 120}, async (req, res) => {
 
+  // ── Signed Upload URL: GET /api?signedUpload=PATH&contentType=TYPE ──
+  // Клиент получает ссылку и грузит файл напрямую в Storage (без лимита размера)
+  if (req.query.signedUpload) {
+    try {
+      const storagePath = req.query.signedUpload;
+      const contentType = req.query.contentType || 'application/octet-stream';
+      const file = bucket.file(storagePath);
+
+      const [signedUrl] = await file.generateSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: Date.now() + 30 * 60 * 1000, // 30 минут
+        contentType: contentType,
+      });
+
+      res.json({ uploadUrl: signedUrl, path: storagePath });
+    } catch (e) {
+      console.error("Signed URL error:", e);
+      res.status(500).json({ error: e.message });
+    }
+    return;
+  }
+
+  // ── Get download URL: GET /api?downloadUrl=PATH ──
+  if (req.query.downloadUrl) {
+    try {
+      const file = bucket.file(req.query.downloadUrl);
+      await file.makePublic();
+      const [metadata] = await file.getMetadata();
+      const token = metadata.metadata && metadata.metadata.firebaseStorageDownloadTokens;
+      const firebaseUrl = token
+        ? `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(req.query.downloadUrl)}?alt=media&token=${token}`
+        : `https://storage.googleapis.com/${bucket.name}/${req.query.downloadUrl}`;
+      res.json({ url: firebaseUrl });
+    } catch (e) {
+      console.error("Download URL error:", e);
+      res.status(500).json({ error: e.message });
+    }
+    return;
+  }
+
   // ── Media proxy: GET /api?media=ENCODED_URL ──
   if (req.query.media) {
     const mediaUrl = req.query.media;
