@@ -11,6 +11,39 @@ class SignageRepository(private val context: Context) {
 
     companion object {
         private const val TAG = "SignageRepository"
+
+        /**
+         * Парсит JSON кэша расписания в Screen объект.
+         * Используется для мгновенного показа из кэша при старте.
+         */
+        fun parseScheduleJson(raw: String): Screen? {
+            return try {
+                val json = JSONObject(raw)
+                val arr = json.getJSONArray("schedule")
+                val schedule = mutableListOf<ScheduleItem>()
+
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    schedule.add(ScheduleItem(
+                        mediaUrl = obj.optString("media_url", ""),
+                        mediaType = obj.optString("media_type", ""),
+                        fileName = obj.optString("file_name", ""),
+                        hasSchedule = obj.optBoolean("has_schedule", false),
+                        endTime = if (obj.isNull("end_time")) null else obj.optString("end_time")
+                    ))
+                }
+
+                Screen(
+                    id = json.optString("id", ""),
+                    slotNumber = json.optInt("slot_number", 0),
+                    schedule = schedule,
+                    updatedAt = 0L
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Ошибка парсинга JSON кэша", e)
+                null
+            }
+        }
     }
 
     private val rest = FirestoreRestClient()

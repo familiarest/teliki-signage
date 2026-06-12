@@ -10,6 +10,7 @@ class PrefsManager(context: Context) {
         private const val KEY_LOCATION_ID = "location_id"
         private const val KEY_LOCATION_NAME = "location_name"
         private const val KEY_SLOT_NUMBER = "slot_number"
+        private const val KEY_LAST_SYNC = "last_sync_time"
 
         @Volatile
         private var instance: PrefsManager? = null
@@ -55,6 +56,14 @@ class PrefsManager(context: Context) {
 
     fun getScheduleCache(locationId: String, slotNumber: Int): String? {
         return prefs.getString("schedule_cache_${locationId}_$slotNumber", null)
+    }
+
+    fun saveLastSyncTime(time: Long) {
+        prefs.edit().putLong(KEY_LAST_SYNC, time).apply()
+    }
+
+    fun getLastSyncTime(): Long {
+        return prefs.getLong(KEY_LAST_SYNC, 0L)
     }
 
     fun clear() {

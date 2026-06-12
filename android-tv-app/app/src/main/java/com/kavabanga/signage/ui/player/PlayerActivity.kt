@@ -33,15 +33,19 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class PlayerActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "PlayerActivity"
-        private const val SCHEDULE_CHECK_INTERVAL_MS = 30_000L
-        private const val SCREEN_POLL_INTERVAL_MS = 60_000L
+        private const val SCHEDULE_CHECK_INTERVAL_MS = 30_000L  // Переключение контента по расписанию
+        private const val DAILY_CHECK_INTERVAL_MS = 3_600_000L  // Проверка раз в час — нужна ли синхронизация
+        private const val SYNC_HOUR = 9  // Синхронизация в 9:00
         private const val CROSSFADE_DURATION_MS = 500L
     }
 
@@ -61,7 +65,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    // Periodic schedule check — switches content based on time
+    // Проверка переключения контента по расписанию (каждые 30 сек)
     private val scheduleChecker = object : Runnable {
         override fun run() {
             checkAndSwitchContent()
@@ -69,11 +73,11 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    // Periodic screen data poll — fetches updates from server via REST
-    private val screenPoller = object : Runnable {
+    // Ежечасная проверка — пора ли синхронизировать (в 9:00)
+    private val dailySyncChecker = object : Runnable {
         override fun run() {
-            pollScreen()
-            handler.postDelayed(this, SCREEN_POLL_INTERVAL_MS)
+            checkIfSyncNeeded()
+            handler.postDelayed(this, DAILY_CHECK_INTERVAL_MS)
         }
     }
 
@@ -166,21 +170,91 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
 
-        Log.i(TAG, "Starting REST polling: location=$locationId, slot=$slotNumber")
-        pollScreen()
-        handler.postDelayed(screenPoller, SCREEN_POLL_INTERVAL_MS)
+        Log.i(TAG, "Start: location=$locationId, slot=$slotNumber")
+
+        // 1. Сразу показываем кэшированный контент
+        loadCachedSchedule(locationId, slotNumber)
+
+        // 2. Проверяем нужна ли синхронизация
+        checkIfSyncNeeded()
+
+        // 3. Запускаем ежечасную проверку на синхронизацию
+        handler.postDelayed(dailySyncChecker, DAILY_CHECK_INTERVAL_MS)
     }
 
-    private fun pollScreen() {
+    /**
+     * Загружает расписание из кэша и сразу показывает контент.
+     */
+    private fun loadCachedSchedule(locationId: String, slotNumber: Int) {
+        val cachedJson = prefsManager.getScheduleCache(locationId, slotNumber)
+        if (cachedJson != null) {
+            try {
+                val screen = SignageRepository.parseScheduleJson(cachedJson)
+                if (screen != null && screen.schedule.isNotEmpty()) {
+                    Log.i(TAG, "Загружен кэш: ${screen.schedule.size} элементов")
+                    currentSchedule = screen.schedule
+                    checkAndSwitchContent()
+                    handler.removeCallbacks(scheduleChecker)
+                    handler.postDelayed(scheduleChecker, SCHEDULE_CHECK_INTERVAL_MS)
+                    return
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Ошибка чтения кэша", e)
+            }
+        }
+        // Нет кэша — грузим с сервера сейчас
+        Log.i(TAG, "Кэш пуст — синхронизация с сервером...")
+        syncFromServer()
+    }
+
+    /**
+     * Проверяет нужна ли синхронизация:
+     * - Если ни разу не синхронизировались → да
+     * - Если сейчас >= 9:00 и последняя синхронизация была до 9:00 сегодня → да
+     */
+    private fun checkIfSyncNeeded() {
+        val now = LocalDateTime.now()
+        val lastSync = prefsManager.getLastSyncTime()
+        val todaySync9am = now.toLocalDate()
+            .atTime(SYNC_HOUR, 0)
+            .atZone(ZoneId.systemDefault())
+            .toInstant().toEpochMilli()
+
+        if (lastSync == 0L) {
+            // Никогда не синхронизировались
+            Log.i(TAG, "Первая синхронизация")
+            syncFromServer()
+        } else if (now.hour >= SYNC_HOUR && lastSync < todaySync9am) {
+            // Сегодня после 9:00, а последняя синхронизация была до 9:00
+            Log.i(TAG, "Ежедневная синхронизация (9:00)")
+            syncFromServer()
+        } else {
+            val nextSync = if (now.hour >= SYNC_HOUR) {
+                // Сегодня уже синхронизировались — следующая завтра в 9:00
+                now.toLocalDate().plusDays(1).atTime(SYNC_HOUR, 0)
+            } else {
+                now.toLocalDate().atTime(SYNC_HOUR, 0)
+            }
+            Log.i(TAG, "Синхронизация не нужна. Следующая: $nextSync")
+        }
+    }
+
+    /**
+     * Загружает данные с сервера и обновляет кэш.
+     */
+    private fun syncFromServer() {
         val locationId = prefsManager.getLocationId() ?: return
         val slotNumber = prefsManager.getSlotNumber()
 
         repository.fetchScreen(locationId, slotNumber) { screen ->
             if (screen == null || screen.schedule.isEmpty()) {
-                Log.w(TAG, "No screen data or empty schedule")
+                Log.w(TAG, "Сервер вернул пустые данные")
                 if (currentSchedule.isEmpty()) showNoContent()
                 return@fetchScreen
             }
+            // Сохраняем время синхронизации
+            prefsManager.saveLastSyncTime(System.currentTimeMillis())
+            Log.i(TAG, "✅ Синхронизация завершена: ${screen.schedule.size} элементов")
             onScheduleReceived(screen)
         }
     }
@@ -425,7 +499,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(scheduleChecker)
-        handler.removeCallbacks(screenPoller)
+        handler.removeCallbacks(dailySyncChecker)
         mediaCheckJob?.cancel()
         releasePlayer()
         // Release WakeLock
