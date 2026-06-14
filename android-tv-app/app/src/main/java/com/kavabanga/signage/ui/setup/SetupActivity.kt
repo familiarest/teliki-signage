@@ -20,6 +20,7 @@ import com.kavabanga.signage.data.FirestoreRestClient
 import com.kavabanga.signage.data.PrefsManager
 import com.kavabanga.signage.databinding.ActivitySetupBinding
 import com.kavabanga.signage.model.Location
+import com.kavabanga.signage.SignageApp
 import com.kavabanga.signage.ui.player.PlayerActivity
 
 class SetupActivity : AppCompatActivity() {
@@ -62,9 +63,9 @@ class SetupActivity : AppCompatActivity() {
         prefsManager = PrefsManager.getInstance(this)
         cacheManager = CacheManager(this)
 
-        // Проверяем был ли крэш — если да, НЕ запускаем плеер автоматически
-        val crashPrefs = getSharedPreferences("crash", MODE_PRIVATE)
-        val hadCrash = crashPrefs.getString("last_crash", null) != null
+        // Читаем crash файл
+        val crashFile = java.io.File(filesDir, SignageApp.CRASH_FILE)
+        val hadCrash = crashFile.exists() && crashFile.length() > 0
 
         if (prefsManager.isConfigured() && !hadCrash) {
             launchPlayer()
@@ -74,14 +75,21 @@ class SetupActivity : AppCompatActivity() {
         binding = ActivitySetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Показываем последний крэш если есть
+        // Показываем crash лог в AlertDialog (не в скроллящемся логе)
         if (hadCrash) {
-            val lastCrash = crashPrefs.getString("last_crash", "")!!
-            log("⚠️ ПОСЛЕДНИЙ КРЭШ:")
-            lastCrash.lines().take(8).forEach { log(it) }
-            crashPrefs.edit().remove("last_crash").apply()
-            log("")
-            log("Выберите экран и нажмите 'Открыть' для повторного запуска")
+            val crashText = try {
+                crashFile.readText().take(2000)
+            } catch (_: Exception) { "Не удалось прочитать crash лог" }
+            crashFile.delete()
+
+            android.app.AlertDialog.Builder(this)
+                .setTitle("💥 Последний крэш")
+                .setMessage(crashText)
+                .setPositiveButton("OK", null)
+                .setCancelable(true)
+                .show()
+
+            log("⚠️ Был крэш — см. диалог")
         }
 
         // Показываем логи REST-клиента на экране

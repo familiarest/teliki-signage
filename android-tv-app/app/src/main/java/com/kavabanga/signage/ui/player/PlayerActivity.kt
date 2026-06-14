@@ -26,6 +26,7 @@ import com.kavabanga.signage.data.CacheManager
 import com.kavabanga.signage.data.PrefsManager
 import com.kavabanga.signage.data.SignageRepository
 import com.kavabanga.signage.databinding.ActivityPlayerBinding
+import com.kavabanga.signage.SignageApp
 import com.kavabanga.signage.model.ScheduleItem
 import com.kavabanga.signage.model.Screen
 import kotlinx.coroutines.Dispatchers
@@ -78,7 +79,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // ВАЖНО: null — не восстанавливаем сломанное состояние после крэша
+        // null — не восстанавливаем сломанное состояние после крэша
         super.onCreate(null)
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
@@ -88,16 +89,16 @@ class PlayerActivity : AppCompatActivity() {
         cacheManager = CacheManager(this)
         repository = SignageRepository(this)
 
-        // Если был крэш — чистим кэш расписания чтобы не крашиться снова
-        val crashPrefs = getSharedPreferences("crash", MODE_PRIVATE)
-        if (crashPrefs.getLong("crash_time", 0) > 0) {
-            Log.w(TAG, "Обнаружен предыдущий крэш — очищаем кэш расписания")
+        // Если был крэш — чистим ВСЁ (расписание + медиа-кэш с битыми файлами)
+        val crashFile = java.io.File(filesDir, SignageApp.CRASH_FILE)
+        if (crashFile.exists()) {
+            Log.w(TAG, "Обнаружен предыдущий крэш — очищаем все кэши")
             val locationId = prefsManager.getLocationId()
             val slot = prefsManager.getSlotNumber()
             if (locationId != null) {
                 prefsManager.saveScheduleCache(locationId, slot, "")
             }
-            crashPrefs.edit().remove("crash_time").commit()
+            cacheManager.clearAll() // Удаляем битые медиа-файлы
         }
 
         setupFullscreen()
@@ -281,11 +282,18 @@ class PlayerActivity : AppCompatActivity() {
 
         currentSchedule = screen.schedule
 
-        // 2. Чистим старый кэш и качаем новые файлы (в фоне)
+        // 1. СНАЧАЛА показываем контент
+        if (!isDestroyed && !isFinishing) {
+            checkAndSwitchContent()
+            handler.removeCallbacks(scheduleChecker)
+            handler.postDelayed(scheduleChecker, SCHEDULE_CHECK_INTERVAL_MS)
+        }
+
+        // 2. ПОТОМ предкэшируем остальные файлы (через 5 сек — чтобы текущий точно скачался)
         val activeUrls = screen.schedule.map { it.mediaUrl }.toSet()
         if (!isDestroyed) {
             lifecycleScope.launch(Dispatchers.IO) {
-                kotlinx.coroutines.delay(500)
+                kotlinx.coroutines.delay(5000) // Ждём 5 сек чтобы текущий файл точно скачался
                 try {
                     cacheManager.clearOldCache(activeUrls)
                     for (item in screen.schedule) {
@@ -302,13 +310,6 @@ class PlayerActivity : AppCompatActivity() {
                     Log.e(TAG, "Ошибка предкачирования", e)
                 }
             }
-        }
-
-        // 3. Показываем новый контент
-        if (!isDestroyed && !isFinishing) {
-            checkAndSwitchContent()
-            handler.removeCallbacks(scheduleChecker)
-            handler.postDelayed(scheduleChecker, SCHEDULE_CHECK_INTERVAL_MS)
         }
     }
 
