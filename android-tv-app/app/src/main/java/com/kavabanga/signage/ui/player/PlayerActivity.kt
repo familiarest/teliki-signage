@@ -80,6 +80,17 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Глобальный обработчик ошибок — перезапуск вместо диалога "произошел сбой"
+        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+            Log.e(TAG, "💥 Необработанная ошибка, перезапуск...", throwable)
+            try {
+                val intent = packageManager.getLaunchIntentForPackage(packageName)
+                intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                startActivity(intent)
+            } catch (_: Exception) {}
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -89,7 +100,13 @@ class PlayerActivity : AppCompatActivity() {
 
         setupFullscreen()
         acquireWakeLock()
-        startPolling()
+
+        try {
+            startPolling()
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка при запуске", e)
+            showNoContent()
+        }
     }
 
     /**
@@ -243,11 +260,24 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun onScheduleReceived(screen: Screen) {
         Log.d(TAG, "Received schedule with ${screen.schedule.size} items")
+
+        // 1. Сначала останавливаем текущее воспроизведение (освобождаем файлы)
+        runOnUiThread {
+            try {
+                releasePlayer()
+                currentMediaUrl = ""  // Сбрасываем чтобы новый контент загрузился
+            } catch (e: Exception) {
+                Log.w(TAG, "Ошибка при остановке плеера", e)
+            }
+        }
+
         currentSchedule = screen.schedule
 
-        // Предкачиваем ВСЕ медиа в фоне для оффлайн-режима
+        // 2. Потом чистим старый кэш и качаем новые файлы
         val activeUrls = screen.schedule.map { it.mediaUrl }.toSet()
         lifecycleScope.launch(Dispatchers.IO) {
+            // Небольшая задержка чтобы плеер точно отпустил файл
+            kotlinx.coroutines.delay(500)
             cacheManager.clearOldCache(activeUrls)
             // Скачиваем все файлы заранее
             for (item in screen.schedule) {
@@ -262,12 +292,14 @@ class PlayerActivity : AppCompatActivity() {
             Log.i(TAG, "Предкачирование завершено: ${activeUrls.size} файлов")
         }
 
-        // Display current content immediately
-        checkAndSwitchContent()
+        // 3. Показываем новый контент
+        runOnUiThread {
+            checkAndSwitchContent()
 
-        // Start schedule checker for time-based switching
-        handler.removeCallbacks(scheduleChecker)
-        handler.postDelayed(scheduleChecker, SCHEDULE_CHECK_INTERVAL_MS)
+            // Запускаем проверку расписания
+            handler.removeCallbacks(scheduleChecker)
+            handler.postDelayed(scheduleChecker, SCHEDULE_CHECK_INTERVAL_MS)
+        }
     }
 
     private fun determineCurrentItem(): ScheduleItem? {
