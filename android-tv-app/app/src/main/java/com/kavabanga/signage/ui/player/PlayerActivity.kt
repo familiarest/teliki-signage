@@ -226,66 +226,74 @@ class PlayerActivity : AppCompatActivity() {
         val slotNumber = prefsManager.getSlotNumber()
 
         repository.fetchScreen(locationId, slotNumber) { screen ->
-            if (screen == null || screen.schedule.isEmpty()) {
-                Log.w(TAG, "Сервер вернул пустые данные")
-                if (currentSchedule.isEmpty()) showNoContent()
-                return@fetchScreen
+            // Защита: activity может быть уже уничтожена
+            if (isDestroyed || isFinishing) return@fetchScreen
+
+            try {
+                if (screen == null || screen.schedule.isEmpty()) {
+                    Log.w(TAG, "Сервер вернул пустые данные")
+                    if (currentSchedule.isEmpty()) showNoContent()
+                    return@fetchScreen
+                }
+
+                // Проверяем изменилось ли расписание
+                val newUrls = screen.schedule.map { it.mediaUrl }.toSet()
+                val oldUrls = currentSchedule.map { it.mediaUrl }.toSet()
+
+                if (newUrls == oldUrls && currentSchedule.isNotEmpty()) {
+                    Log.i(TAG, "✅ Контент актуален, обновление не требуется")
+                    return@fetchScreen
+                }
+
+                Log.i(TAG, "🔄 Обнаружен новый контент! Обновляем...")
+                prefsManager.saveLastSyncTime(System.currentTimeMillis())
+                onScheduleReceived(screen)
+            } catch (e: Exception) {
+                Log.e(TAG, "Ошибка в sync callback", e)
             }
-
-            // Проверяем изменилось ли расписание
-            val newUrls = screen.schedule.map { it.mediaUrl }.toSet()
-            val oldUrls = currentSchedule.map { it.mediaUrl }.toSet()
-
-            if (newUrls == oldUrls && currentSchedule.isNotEmpty()) {
-                Log.i(TAG, "✅ Контент актуален, обновление не требуется")
-                return@fetchScreen
-            }
-
-            Log.i(TAG, "🔄 Обнаружен новый контент! Обновляем...")
-            prefsManager.saveLastSyncTime(System.currentTimeMillis())
-            onScheduleReceived(screen)
         }
     }
 
     private fun onScheduleReceived(screen: Screen) {
+        if (isDestroyed || isFinishing) return
         Log.d(TAG, "Received schedule with ${screen.schedule.size} items")
 
-        // 1. Сначала останавливаем текущее воспроизведение (освобождаем файлы)
-        runOnUiThread {
-            try {
-                releasePlayer()
-                currentMediaUrl = ""  // Сбрасываем чтобы новый контент загрузился
-            } catch (e: Exception) {
-                Log.w(TAG, "Ошибка при остановке плеера", e)
-            }
+        try {
+            // 1. Останавливаем текущее воспроизведение
+            releasePlayer()
+            currentMediaUrl = ""
+        } catch (e: Exception) {
+            Log.w(TAG, "Ошибка при остановке плеера", e)
         }
 
         currentSchedule = screen.schedule
 
-        // 2. Потом чистим старый кэш и качаем новые файлы
+        // 2. Чистим старый кэш и качаем новые файлы (в фоне)
         val activeUrls = screen.schedule.map { it.mediaUrl }.toSet()
-        lifecycleScope.launch(Dispatchers.IO) {
-            // Небольшая задержка чтобы плеер точно отпустил файл
-            kotlinx.coroutines.delay(500)
-            cacheManager.clearOldCache(activeUrls)
-            // Скачиваем все файлы заранее
-            for (item in screen.schedule) {
-                if (item.mediaUrl.isNotBlank()) {
-                    try {
-                        cacheManager.downloadAndCache(item.mediaUrl)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Предкачирование не удалось: ${item.fileName}", e)
+        if (!isDestroyed) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                kotlinx.coroutines.delay(500)
+                try {
+                    cacheManager.clearOldCache(activeUrls)
+                    for (item in screen.schedule) {
+                        if (item.mediaUrl.isNotBlank()) {
+                            try {
+                                cacheManager.downloadAndCache(item.mediaUrl)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Предкачирование не удалось: ${item.fileName}", e)
+                            }
+                        }
                     }
+                    Log.i(TAG, "Предкачирование завершено: ${activeUrls.size} файлов")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Ошибка предкачирования", e)
                 }
             }
-            Log.i(TAG, "Предкачирование завершено: ${activeUrls.size} файлов")
         }
 
         // 3. Показываем новый контент
-        runOnUiThread {
+        if (!isDestroyed && !isFinishing) {
             checkAndSwitchContent()
-
-            // Запускаем проверку расписания
             handler.removeCallbacks(scheduleChecker)
             handler.postDelayed(scheduleChecker, SCHEDULE_CHECK_INTERVAL_MS)
         }
