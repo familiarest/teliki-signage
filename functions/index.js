@@ -11,6 +11,22 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/
 
 exports.api = onRequest({cors: true, region: "us-central1", memory: "512MiB", timeoutSeconds: 120}, async (req, res) => {
 
+  // ── Setup CORS on bucket: GET /api?setupCors=1 ──
+  if (req.query.setupCors) {
+    try {
+      await bucket.setCorsConfiguration([{
+        origin: ['*'],
+        method: ['GET', 'PUT', 'POST', 'HEAD'],
+        maxAgeSeconds: 3600,
+        responseHeader: ['Content-Type', 'Content-Length', 'Content-Range']
+      }]);
+      res.json({ success: true, message: 'CORS configured' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+    return;
+  }
+
   // ── Signed Upload URL: GET /api?signedUpload=PATH&contentType=TYPE ──
   // Клиент получает ссылку и грузит файл напрямую в Storage (без лимита размера)
   if (req.query.signedUpload) {
