@@ -358,6 +358,8 @@ class PlayerActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error displaying media: ${e.message}", e)
                 hideLoading()
+                // Запоминаем URL чтобы не пытаться снова каждые 30 сек
+                currentMediaUrl = item.mediaUrl
                 tryShowCached(item)
             }
         }

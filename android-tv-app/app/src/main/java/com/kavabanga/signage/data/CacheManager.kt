@@ -153,9 +153,9 @@ class CacheManager(private val context: Context) {
     }
 
     private fun proxyUrl(url: String): String {
-        // Firebase Storage is geo-blocked in certain regions (403 "not available in your location")
-        // Route through Cloud Function proxy which runs in us-central1 (no geo-block)
-        if (url.contains("firebasestorage.googleapis.com")) {
+        // Google Storage заблокирован у провайдера — проксируем через Vercel
+        if (url.contains("firebasestorage.googleapis.com") ||
+            url.contains("storage.googleapis.com")) {
             val encoded = java.net.URLEncoder.encode(url, "UTF-8")
             return "https://teliki-signage.vercel.app/api?media=$encoded"
         }
