@@ -35,7 +35,7 @@ exports.api = onRequest({cors: true, region: "us-central1", memory: "512MiB", ti
       const contentType = req.query.contentType || 'application/octet-stream';
       const file = bucket.file(storagePath);
 
-      const [signedUrl] = await file.generateSignedUrl({
+      const [signedUrl] = await file.getSignedUrl({
         version: 'v4',
         action: 'write',
         expires: Date.now() + 30 * 60 * 1000, // 30 минут
