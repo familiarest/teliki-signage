@@ -62,7 +62,11 @@ class SetupActivity : AppCompatActivity() {
         prefsManager = PrefsManager.getInstance(this)
         cacheManager = CacheManager(this)
 
-        if (prefsManager.isConfigured()) {
+        // Проверяем был ли крэш — если да, НЕ запускаем плеер автоматически
+        val crashPrefs = getSharedPreferences("crash", MODE_PRIVATE)
+        val hadCrash = crashPrefs.getString("last_crash", null) != null
+
+        if (prefsManager.isConfigured() && !hadCrash) {
             launchPlayer()
             return
         }
@@ -71,13 +75,13 @@ class SetupActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Показываем последний крэш если есть
-        val crashPrefs = getSharedPreferences("crash", MODE_PRIVATE)
-        val lastCrash = crashPrefs.getString("last_crash", null)
-        if (lastCrash != null) {
+        if (hadCrash) {
+            val lastCrash = crashPrefs.getString("last_crash", "")!!
             log("⚠️ ПОСЛЕДНИЙ КРЭШ:")
-            // Показываем только первые 5 строк стектрейса
-            lastCrash.lines().take(5).forEach { log(it) }
+            lastCrash.lines().take(8).forEach { log(it) }
             crashPrefs.edit().remove("last_crash").apply()
+            log("")
+            log("Выберите экран и нажмите 'Открыть' для повторного запуска")
         }
 
         // Показываем логи REST-клиента на экране
