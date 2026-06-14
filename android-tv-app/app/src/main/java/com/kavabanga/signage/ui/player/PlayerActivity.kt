@@ -78,7 +78,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // ВАЖНО: null — не восстанавливаем сломанное состояние после крэша
+        super.onCreate(null)
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -87,12 +88,24 @@ class PlayerActivity : AppCompatActivity() {
         cacheManager = CacheManager(this)
         repository = SignageRepository(this)
 
+        // Если был крэш — чистим кэш расписания чтобы не крашиться снова
+        val crashPrefs = getSharedPreferences("crash", MODE_PRIVATE)
+        if (crashPrefs.getLong("crash_time", 0) > 0) {
+            Log.w(TAG, "Обнаружен предыдущий крэш — очищаем кэш расписания")
+            val locationId = prefsManager.getLocationId()
+            val slot = prefsManager.getSlotNumber()
+            if (locationId != null) {
+                prefsManager.saveScheduleCache(locationId, slot, "")
+            }
+            crashPrefs.edit().remove("crash_time").commit()
+        }
+
         setupFullscreen()
         acquireWakeLock()
 
         try {
             startPolling()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Ошибка при запуске", e)
             showNoContent()
         }
@@ -352,12 +365,15 @@ class PlayerActivity : AppCompatActivity() {
                 displayMedia(item)
                 hideLoading()
                 currentMediaUrl = item.mediaUrl
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Error displaying media: ${e.message}", e)
                 hideLoading()
-                // Запоминаем URL чтобы не пытаться снова каждые 30 сек
                 currentMediaUrl = item.mediaUrl
-                tryShowCached(item)
+                try {
+                    tryShowCached(item)
+                } catch (_: Throwable) {
+                    showNoContent()
+                }
             }
         }
     }

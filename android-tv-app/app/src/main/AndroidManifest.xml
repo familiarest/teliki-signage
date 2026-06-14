@@ -37,7 +37,6 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="unspecified"
-            android:launchMode="singleTask"
             android:theme="@style/Theme.KavabangaSignage.Fullscreen" />
 
         <receiver
