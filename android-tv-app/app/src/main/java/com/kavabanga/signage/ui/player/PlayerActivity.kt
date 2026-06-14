@@ -80,6 +80,21 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Записываем крэши в файл для диагностики
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val trace = throwable.stackTraceToString()
+                Log.e(TAG, "💥 CRASH: $trace")
+                val crashFile = java.io.File(filesDir, "crash.log")
+                crashFile.writeText("${java.util.Date()}\n$trace")
+                // Сохраняем в prefs чтобы показать в SetupActivity
+                getSharedPreferences("crash", MODE_PRIVATE)
+                    .edit().putString("last_crash", trace).apply()
+            } catch (_: Exception) {}
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

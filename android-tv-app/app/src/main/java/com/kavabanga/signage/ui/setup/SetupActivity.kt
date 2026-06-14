@@ -70,6 +70,16 @@ class SetupActivity : AppCompatActivity() {
         binding = ActivitySetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Показываем последний крэш если есть
+        val crashPrefs = getSharedPreferences("crash", MODE_PRIVATE)
+        val lastCrash = crashPrefs.getString("last_crash", null)
+        if (lastCrash != null) {
+            log("⚠️ ПОСЛЕДНИЙ КРЭШ:")
+            // Показываем только первые 5 строк стектрейса
+            lastCrash.lines().take(5).forEach { log(it) }
+            crashPrefs.edit().remove("last_crash").apply()
+        }
+
         // Показываем логи REST-клиента на экране
         restClient.logListener = { msg -> log(msg) }
 
