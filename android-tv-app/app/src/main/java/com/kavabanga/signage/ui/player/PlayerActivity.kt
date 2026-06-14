@@ -80,17 +80,6 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Глобальный обработчик ошибок — перезапуск вместо диалога "произошел сбой"
-        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
-            Log.e(TAG, "💥 Необработанная ошибка, перезапуск...", throwable)
-            try {
-                val intent = packageManager.getLaunchIntentForPackage(packageName)
-                intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                startActivity(intent)
-            } catch (_: Exception) {}
-            android.os.Process.killProcess(android.os.Process.myPid())
-        }
-
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
