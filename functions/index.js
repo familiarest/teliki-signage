@@ -9,7 +9,7 @@ const firestore = admin.firestore();
 const PROJECT = "kava-signage-2026";
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
 
-exports.api = onRequest({cors: true, region: "us-central1", memory: "512MiB", timeoutSeconds: 120}, async (req, res) => {
+exports.api = onRequest({cors: true, region: "us-central1", memory: "1GiB", timeoutSeconds: 300}, async (req, res) => {
 
   // ── Setup CORS on bucket: GET /api?setupCors=1 ──
   if (req.query.setupCors) {
@@ -27,24 +27,51 @@ exports.api = onRequest({cors: true, region: "us-central1", memory: "512MiB", ti
     return;
   }
 
-  // ── Signed Upload URL: GET /api?signedUpload=PATH&contentType=TYPE ──
-  // Клиент получает ссылку и грузит файл напрямую в Storage (без лимита размера)
-  if (req.query.signedUpload) {
+  // ── Assemble chunks: POST /api?assemble=FINAL_PATH&parts=N ──
+  // Клиент загружает куски через ?upload, потом собираем в один файл
+  if (req.method === "POST" && req.query.assemble) {
     try {
-      const storagePath = req.query.signedUpload;
+      const finalPath = req.query.assemble;
+      const parts = parseInt(req.query.parts);
       const contentType = req.query.contentType || 'application/octet-stream';
-      const file = bucket.file(storagePath);
 
-      const [signedUrl] = await file.getSignedUrl({
-        version: 'v4',
-        action: 'write',
-        expires: Date.now() + 30 * 60 * 1000, // 30 минут
-        contentType: contentType,
+      const finalFile = bucket.file(finalPath);
+      const writeStream = finalFile.createWriteStream({
+        metadata: { contentType },
+        resumable: false,
       });
 
-      res.json({ uploadUrl: signedUrl, path: storagePath });
+      // Читаем куски по порядку и пишем в финальный файл
+      for (let i = 0; i < parts; i++) {
+        const chunkPath = `_chunks/${finalPath}/part_${i}`;
+        const chunkFile = bucket.file(chunkPath);
+        const [chunkData] = await chunkFile.download();
+        writeStream.write(chunkData);
+      }
+
+      await new Promise((resolve, reject) => {
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+        writeStream.end();
+      });
+
+      // Удаляем куски
+      for (let i = 0; i < parts; i++) {
+        const chunkPath = `_chunks/${finalPath}/part_${i}`;
+        await bucket.file(chunkPath).delete().catch(() => {});
+      }
+
+      // Делаем файл публичным и получаем URL
+      await finalFile.makePublic();
+      const [metadata] = await finalFile.getMetadata();
+      const token = metadata.metadata && metadata.metadata.firebaseStorageDownloadTokens;
+      const firebaseUrl = token
+        ? `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(finalPath)}?alt=media&token=${token}`
+        : `https://storage.googleapis.com/${bucket.name}/${finalPath}`;
+
+      res.json({ url: firebaseUrl, path: finalPath });
     } catch (e) {
-      console.error("Signed URL error:", e);
+      console.error("Assemble error:", e);
       res.status(500).json({ error: e.message });
     }
     return;

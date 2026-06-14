@@ -726,47 +726,58 @@
     return div.innerHTML;
   }
 
-  // ── Direct Firebase Storage Upload (через signed URL) ───
-  // 1. Получаем signed URL от Cloud Function (маленький запрос)
-  // 2. Грузим файл напрямую в Storage (без лимита, с прогрессом)
+  // ── Chunked Upload (для больших файлов) ────────────────
+  // Файлы > 10MB режутся на куски, каждый загружается отдельно
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+
   async function uploadToStorage(file, storagePath, onProgress) {
-    // Шаг 1: получаем signed URL
+    if (file.size <= CHUNK_SIZE) {
+      // Маленький файл — обычная загрузка
+      if (onProgress) onProgress(5);
+      const resp = await fetch(`${API_BASE}?upload=${encodeURIComponent(storagePath)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file
+      });
+      if (!resp.ok) throw new Error('Upload failed');
+      const result = await resp.json();
+      if (onProgress) onProgress(100);
+      return result.url || result.publicUrl;
+    }
+
+    // Большой файл — chunked upload
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    console.log(`[Teliki] Chunked upload: ${totalChunks} частей по ${formatFileSize(CHUNK_SIZE)}`);
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const chunkPath = `_chunks/${storagePath}/part_${i}`;
+      const resp = await fetch(`${API_BASE}?upload=${encodeURIComponent(chunkPath)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: chunk
+      });
+
+      if (!resp.ok) throw new Error(`Chunk ${i + 1}/${totalChunks} failed`);
+      if (onProgress) onProgress(Math.round(((i + 1) / (totalChunks + 1)) * 100));
+    }
+
+    // Собираем куски на сервере
+    if (onProgress) onProgress(95);
     const ct = file.type || 'application/octet-stream';
-    const signResp = await fetch(
-      `${API_BASE}?signedUpload=${encodeURIComponent(storagePath)}&contentType=${encodeURIComponent(ct)}`
+    const assembleResp = await fetch(
+      `${API_BASE}?assemble=${encodeURIComponent(storagePath)}&parts=${totalChunks}&contentType=${encodeURIComponent(ct)}`,
+      { method: 'POST' }
     );
-    if (!signResp.ok) throw new Error('Не удалось получить ссылку для загрузки');
-    const { uploadUrl } = await signResp.json();
-
-    // Шаг 2: загружаем файл напрямую с реальным прогрессом
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', ct);
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && onProgress) {
-          onProgress(Math.round((e.loaded / e.total) * 100));
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error(`Upload HTTP ${xhr.status}`));
-      };
-      xhr.onerror = () => reject(new Error('Ошибка сети при загрузке'));
-      xhr.ontimeout = () => reject(new Error('Таймаут загрузки'));
-      xhr.timeout = 600000; // 10 минут
-
-      xhr.send(file);
-    });
-
-    // Шаг 3: получаем download URL
-    const dlResp = await fetch(
-      `${API_BASE}?downloadUrl=${encodeURIComponent(storagePath)}`
-    );
-    if (!dlResp.ok) throw new Error('Не удалось получить ссылку на файл');
-    const { url } = await dlResp.json();
+    if (!assembleResp.ok) {
+      const err = await assembleResp.json().catch(() => ({}));
+      throw new Error(err.error || 'Assembly failed');
+    }
+    const { url } = await assembleResp.json();
+    if (onProgress) onProgress(100);
     return url;
   }
 
