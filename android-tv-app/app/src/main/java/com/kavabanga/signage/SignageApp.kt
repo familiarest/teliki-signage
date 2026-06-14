@@ -1,22 +1,29 @@
 package com.kavabanga.signage
 
 import android.app.Application
-import com.google.firebase.FirebaseApp
 import android.util.Log
 
 class SignageApp : Application() {
 
-    companion object {
-        private const val TAG = "SignageApp"
-    }
-
     override fun onCreate() {
         super.onCreate()
-        try {
-            FirebaseApp.initializeApp(this)
-            Log.i(TAG, "Firebase initialized successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize Firebase", e)
+
+        // Глобальный обработчик крэшей — сохраняет стектрейс ПЕРЕД смертью процесса
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val trace = throwable.stackTraceToString()
+                Log.e("SignageApp", "💥 CRASH:\n$trace")
+
+                // commit() вместо apply() — синхронная запись до смерти процесса
+                getSharedPreferences("crash", MODE_PRIVATE)
+                    .edit()
+                    .putString("last_crash", trace)
+                    .putLong("crash_time", System.currentTimeMillis())
+                    .commit()
+            } catch (_: Exception) {}
+
+            defaultHandler?.uncaughtException(thread, throwable)
         }
     }
 }
