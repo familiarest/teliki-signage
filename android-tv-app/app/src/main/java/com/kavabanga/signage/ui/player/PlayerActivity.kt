@@ -376,22 +376,48 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showVideo(file: File) {
-        Log.d(TAG, "Showing video: ${file.name}")
-        crossfadeOut(binding.imageView)
-        hideNoContent()
-        releasePlayer()
+        Log.d(TAG, "Showing video: ${file.name} (${file.length() / 1024}KB)")
 
-        val player = ExoPlayer.Builder(this).build().apply {
-            repeatMode = Player.REPEAT_MODE_ALL
-            val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
-            setMediaItem(mediaItem)
-            prepare()
-            playWhenReady = true
+        // Проверяем что файл существует и не пустой
+        if (!file.exists() || file.length() == 0L) {
+            Log.e(TAG, "Видео файл пустой или не существует: ${file.absolutePath}")
+            showNoContent()
+            return
         }
 
-        exoPlayer = player
-        binding.playerView.player = player
-        crossfadeIn(binding.playerView)
+        try {
+            crossfadeOut(binding.imageView)
+            hideNoContent()
+            releasePlayer()
+
+            val player = ExoPlayer.Builder(this).build().apply {
+                repeatMode = Player.REPEAT_MODE_ALL
+
+                // Обработчик ошибок — не даём приложению упасть
+                addListener(object : Player.Listener {
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        Log.e(TAG, "ExoPlayer ошибка: ${error.message}", error)
+                        runOnUiThread {
+                            releasePlayer()
+                            showNoContent()
+                        }
+                    }
+                })
+
+                val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
+                setMediaItem(mediaItem)
+                prepare()
+                playWhenReady = true
+            }
+
+            exoPlayer = player
+            binding.playerView.player = player
+            crossfadeIn(binding.playerView)
+        } catch (e: Exception) {
+            Log.e(TAG, "Крэш при запуске видео: ${e.message}", e)
+            releasePlayer()
+            showNoContent()
+        }
     }
 
     private fun showImage(file: File) {

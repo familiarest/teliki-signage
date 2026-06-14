@@ -57,8 +57,8 @@ class CacheManager(private val context: Context) {
 
         try {
             val connection = URL(downloadUrl).openConnection() as HttpURLConnection
-            connection.connectTimeout = 20_000
-            connection.readTimeout = 60_000
+            connection.connectTimeout = 30_000
+            connection.readTimeout = 300_000  // 5 минут для больших видео
             connection.instanceFollowRedirects = true
             connection.setRequestProperty("User-Agent", "KavabangaSignage/1.0 Android")
 
