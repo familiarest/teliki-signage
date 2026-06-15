@@ -474,9 +474,17 @@ class PlayerActivity : AppCompatActivity() {
         hideNoContent()
         releasePlayer()
 
+        // Получаем размер экрана — нет смысла декодировать фото больше экрана
+        val display = windowManager.defaultDisplay
+        val size = android.graphics.Point()
+        display.getRealSize(size)
+        val screenW = maxOf(size.x, 1920)
+        val screenH = maxOf(size.y, 1080)
+
         Glide.with(applicationContext)
             .load(file)
-            .override(Target.SIZE_ORIGINAL)  // Full quality, no downsampling
+            .override(screenW, screenH)  // Масштабируем до размера экрана (не 256MB!)
+            .centerInside()
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(false)
             .error(R.color.black)
