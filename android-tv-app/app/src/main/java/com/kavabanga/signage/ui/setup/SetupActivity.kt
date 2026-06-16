@@ -8,96 +8,100 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.kavabanga.signage.R
 import com.kavabanga.signage.data.CacheManager
-import com.kavabanga.signage.data.FirestoreRestClient
 import com.kavabanga.signage.data.PrefsManager
+import com.kavabanga.signage.data.YandexDiskClient
 import com.kavabanga.signage.databinding.ActivitySetupBinding
-import com.kavabanga.signage.model.Location
 import com.kavabanga.signage.SignageApp
 import com.kavabanga.signage.ui.player.PlayerActivity
+import kotlinx.coroutines.launch
 
 class SetupActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "SetupActivity"
-
-        private val FALLBACK_LOCATIONS = listOf(
-            Location(id = "M200wBGhHOGJxfhiHx2v", name = "Ак-Мечеть", createdAt = 1),
-            Location(id = "XNwvh8GUxvdMJTdCD1l0", name = "Франко", createdAt = 2),
-            Location(id = "Nc2gPJKAtoNS8Etg7ibz", name = "Пушкина", createdAt = 3),
-            Location(id = "8IZ9AfGntTfg2j2SpFFx", name = "Евпатория", createdAt = 4),
-            Location(id = "nsNLtfKI1XPnRwxdu6eF", name = "Саки", createdAt = 5),
-            Location(id = "Q9bg7x55gLEkG4FaHxBy", name = "Бахчисарай", createdAt = 6),
-        )
+        private const val YANDEX_TOKEN = "y0__wgBELGZqPQEGNDcQyCZu975FzDIisPzB5AJqrhJ_j16EutHF5ZemN-VaYjb"
+        private const val ROOT_FOLDER = "disk:/Teliki"
     }
 
     private lateinit var binding: ActivitySetupBinding
     private lateinit var prefsManager: PrefsManager
-    private val restClient = FirestoreRestClient()
     private lateinit var cacheManager: CacheManager
+    private val diskClient = YandexDiskClient(YANDEX_TOKEN)
 
-    private var locations: List<Location> = emptyList()
-    private var selectedLocation: Location? = null
+    // Список локаций (подпапки disk:/Teliki)
+    private var locationNames: List<String> = emptyList()
+    private var selectedLocationName: String? = null
     private var selectedSlot: Int = -1
     private val debugLog = StringBuilder()
 
-    // Данные экранов для текущей локации: slot_number -> (mediaUrl, fileName, mediaType)
+    // Данные экранов для текущей локации
     private data class ScreenPreview(
         val slot: Int,
-        val mediaUrl: String,
-        val fileName: String,
-        val mediaType: String
+        val screenName: String,     // "Экран 1"
+        val diskPath: String,       // "disk:/Teliki/Ак-Мечеть/Экран 1"
+        val previewUrl: String,     // прямая ссылка на первое изображение
+        val fileName: String,       // имя файла для отображения
+        val isVideo: Boolean
     )
     private var screenPreviews: List<ScreenPreview> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        prefsManager = PrefsManager.getInstance(this)
-        cacheManager = CacheManager(this)
+        try {
+            prefsManager = PrefsManager.getInstance(this)
+            cacheManager = CacheManager(this)
 
-        // Читаем crash файл
-        val crashFile = java.io.File(filesDir, SignageApp.CRASH_FILE)
-        val hadCrash = crashFile.exists() && crashFile.length() > 0
+            // Всегда показываем экран выбора — НЕ автозапускаем плеер
+            binding = ActivitySetupBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        if (prefsManager.isConfigured() && !hadCrash) {
-            launchPlayer()
-            return
+            // Сбрасываем старые настройки без diskPath (от v1)
+            if (prefsManager.isConfigured() && prefsManager.getDiskPath().isBlank()) {
+                prefsManager.clear()
+                log("🧹 Очищены старые настройки v1")
+            }
+
+            // Показываем crash лог если был
+            val crashFile = java.io.File(filesDir, SignageApp.CRASH_FILE)
+            if (crashFile.exists() && crashFile.length() > 0) {
+                val crashText = try {
+                    crashFile.readText().take(2000)
+                } catch (_: Exception) { "Не удалось прочитать crash лог" }
+                crashFile.delete()
+
+                android.app.AlertDialog.Builder(this)
+                    .setTitle("💥 Последний крэш")
+                    .setMessage(crashText)
+                    .setPositiveButton("OK", null)
+                    .setCancelable(true)
+                    .show()
+
+                log("⚠️ Был крэш — см. диалог")
+            }
+
+            log("🚀 Запуск. Загрузка локаций с Яндекс Диска...")
+            loadLocations()
+            setupSaveButton()
+        } catch (e: Exception) {
+            Log.e(TAG, "FATAL onCreate: ${e.message}", e)
+            // Показываем хоть что-то
+            try {
+                setContentView(android.widget.TextView(this).apply {
+                    text = "Ошибка запуска:\n${e.message}\n\nПереустановите приложение"
+                    textSize = 18f
+                    setPadding(40, 40, 40, 40)
+                })
+            } catch (_: Exception) {}
         }
-
-        binding = ActivitySetupBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Показываем crash лог в AlertDialog (не в скроллящемся логе)
-        if (hadCrash) {
-            val crashText = try {
-                crashFile.readText().take(2000)
-            } catch (_: Exception) { "Не удалось прочитать crash лог" }
-            crashFile.delete()
-
-            android.app.AlertDialog.Builder(this)
-                .setTitle("💥 Последний крэш")
-                .setMessage(crashText)
-                .setPositiveButton("OK", null)
-                .setCancelable(true)
-                .show()
-
-            log("⚠️ Был крэш — см. диалог")
-        }
-
-        // Показываем логи REST-клиента на экране
-        restClient.logListener = { msg -> log(msg) }
-
-        log("🚀 Запуск. Загрузка локаций...")
-        loadLocations()
-        setupSaveButton()
     }
 
     // ── Логирование на экран ─────────────────────────────
@@ -111,51 +115,54 @@ class SetupActivity : AppCompatActivity() {
         }
     }
 
-    // ── Загрузка локаций ─────────────────────────────────
+    // ── Загрузка локаций (подпапки disk:/Teliki) ─────────
 
     private fun loadLocations() {
         binding.progressBar.visibility = View.VISIBLE
         binding.contentLayout.visibility = View.GONE
 
-        restClient.getCollection("locations",
-            onSuccess = { docs ->
-                log("✅ Получено ${docs.size} локаций с сервера")
-                if (docs.isNotEmpty()) {
-                    val parsed = docs.mapNotNull { doc ->
-                        val id = doc["__id__"] as? String ?: return@mapNotNull null
-                        val name = doc["name"] as? String ?: return@mapNotNull null
-                        Location(id = id, name = name, createdAt = 0L)
-                    }
-                    if (parsed.isNotEmpty()) {
-                        showLocations(parsed)
-                        return@getCollection
-                    }
+        lifecycleScope.launch {
+            try {
+                log("📡 GET $ROOT_FOLDER")
+                val items = diskClient.listFolder(ROOT_FOLDER)
+                val folders = items.filter { it.type == "dir" }
+
+                if (folders.isEmpty()) {
+                    log("⚠️ Нет подпапок в $ROOT_FOLDER")
+                    showLocations(emptyList())
+                    return@launch
                 }
-                log("⚠️ Сервер вернул пусто, используем fallback")
-                showLocations(FALLBACK_LOCATIONS)
-            },
-            onError = { e ->
-                log("❌ Ошибка сети: ${e.message}")
-                log("⚠️ Используем fallback локации")
-                showLocations(FALLBACK_LOCATIONS)
+
+                log("✅ Получено ${folders.size} локаций")
+                showLocations(folders.map { it.name })
+            } catch (e: Exception) {
+                log("❌ Ошибка загрузки локаций: ${e.message}")
+                showLocations(emptyList())
             }
-        )
+        }
     }
 
-    private fun showLocations(list: List<Location>) {
-        locations = list
-        log("📍 Локации: ${list.map { it.name }}")
+    private fun showLocations(list: List<String>) {
+        locationNames = list
+        log("📍 Локации: $list")
 
-        val adapter = ArrayAdapter(this, R.layout.spinner_item, locations.map { it.name })
+        if (list.isEmpty()) {
+            binding.progressBar.visibility = View.GONE
+            binding.contentLayout.visibility = View.VISIBLE
+            log("⚠️ Список локаций пуст")
+            return
+        }
+
+        val adapter = ArrayAdapter(this, R.layout.spinner_item, locationNames)
         adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
         binding.spinnerLocation.adapter = adapter
 
         binding.spinnerLocation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                selectedLocation = locations[pos]
+                selectedLocationName = locationNames[pos]
                 selectedSlot = -1
-                log("📍 Выбрана: ${locations[pos].name}")
-                loadScreens(locations[pos])
+                log("📍 Выбрана: ${locationNames[pos]}")
+                loadScreens(locationNames[pos])
             }
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
@@ -166,58 +173,83 @@ class SetupActivity : AppCompatActivity() {
 
     // ── Загрузка экранов для локации ─────────────────────
 
-    private fun loadScreens(location: Location) {
+    private fun loadScreens(locationName: String) {
         binding.screensLabel.visibility = View.GONE
         binding.screensGrid.visibility = View.GONE
         binding.screensProgress.visibility = View.VISIBLE
         binding.btnSave.visibility = View.GONE
 
-        log("📡 Загрузка экранов для ${location.name}...")
+        val locationPath = "$ROOT_FOLDER/$locationName"
+        log("📡 Загрузка экранов: $locationPath")
 
-        restClient.getSubcollection("locations", location.id, "screens",
-            onSuccess = { docs ->
-                log("✅ Получено ${docs.size} экранов")
+        lifecycleScope.launch {
+            try {
+                val items = diskClient.listFolder(locationPath)
+                val screenFolders = items.filter { it.type == "dir" }.sortedBy { it.name }
+
+                log("✅ Получено ${screenFolders.size} экранов")
+
                 val previews = mutableListOf<ScreenPreview>()
+                for (folder in screenFolders) {
+                    val slotNumber = extractSlotNumber(folder.name)
+                    val screenPath = folder.path
 
-                for (doc in docs) {
-                    val slot = when (val s = doc["slot_number"]) {
-                        is Long -> s.toInt()
-                        is Number -> s.toInt()
-                        else -> continue
-                    }
-                    @Suppress("UNCHECKED_CAST")
-                    val schedule = doc["schedule"] as? List<Map<String, Any?>> ?: emptyList()
-                    val firstItem = schedule.firstOrNull()
+                    // Пытаемся загрузить превью первого файла
+                    var previewUrl = ""
+                    var fileName = ""
+                    var isVideo = false
 
-                    if (firstItem != null) {
-                        val mediaUrl = firstItem["media_url"] as? String ?: ""
-                        val fileName = firstItem["file_name"] as? String ?: ""
-                        val mediaType = firstItem["media_type"] as? String ?: ""
-                        previews.add(ScreenPreview(slot, mediaUrl, fileName, mediaType))
-                        log("  📺 Экран $slot: $fileName ($mediaType)")
-                    } else {
-                        previews.add(ScreenPreview(slot, "", "", ""))
-                        log("  📺 Экран $slot: пусто")
-                    }
-                }
+                    try {
+                        val screenItems = diskClient.listFolder(screenPath)
+                        val firstFile = screenItems.firstOrNull { it.type == "file" }
+                        if (firstFile != null) {
+                            fileName = firstFile.name
+                            isVideo = firstFile.mimeType?.startsWith("video") == true
 
-                // Добавляем недостающие слоты (до 5)
-                for (s in 1..5) {
-                    if (previews.none { it.slot == s }) {
-                        previews.add(ScreenPreview(s, "", "", ""))
+                            if (!isVideo) {
+                                // Для изображений получаем прямую ссылку
+                                previewUrl = diskClient.getDownloadUrl(firstFile.path)
+                                log("  🖼️ Превью: $fileName")
+                            } else {
+                                log("  🎬 Видео: $fileName")
+                            }
+                        } else {
+                            log("  📭 ${folder.name}: пусто")
+                        }
+                    } catch (e: Exception) {
+                        log("  ⚠️ Ошибка превью ${folder.name}: ${e.message}")
                     }
+
+                    previews.add(
+                        ScreenPreview(
+                            slot = slotNumber,
+                            screenName = folder.name,
+                            diskPath = screenPath,
+                            previewUrl = previewUrl,
+                            fileName = fileName,
+                            isVideo = isVideo
+                        )
+                    )
                 }
 
                 screenPreviews = previews.sortedBy { it.slot }
                 showScreenCards()
-            },
-            onError = { e ->
+            } catch (e: Exception) {
                 log("❌ Ошибка загрузки экранов: ${e.message}")
-                // Показываем 5 пустых экранов
-                screenPreviews = (1..5).map { ScreenPreview(it, "", "", "") }
+                screenPreviews = emptyList()
                 showScreenCards()
             }
-        )
+        }
+    }
+
+    /**
+     * Извлекает номер экрана из имени папки.
+     * "Экран 1" → 1, "Экран 2" → 2, и т.д.
+     * Если не удалось — возвращает 0.
+     */
+    private fun extractSlotNumber(folderName: String): Int {
+        val regex = Regex("""(\d+)""")
+        return regex.find(folderName)?.groupValues?.get(1)?.toIntOrNull() ?: 0
     }
 
     // ── Отображение карточек экранов ────────────────────
@@ -230,6 +262,10 @@ class SetupActivity : AppCompatActivity() {
         binding.screensLabel.visibility = View.VISIBLE
         binding.screensGrid.visibility = View.VISIBLE
 
+        if (screenPreviews.isEmpty()) {
+            log("📭 Нет экранов для выбранной локации")
+        }
+
         for (preview in screenPreviews) {
             val card = LayoutInflater.from(this).inflate(R.layout.item_screen_card, grid, false)
 
@@ -239,36 +275,32 @@ class SetupActivity : AppCompatActivity() {
             val info = card.findViewById<TextView>(R.id.screenInfo)
             val border = card.findViewById<View>(R.id.screenSelected)
 
-            label.text = "Экран ${preview.slot}"
+            label.text = preview.screenName
 
-            if (preview.mediaUrl.isNotBlank()) {
-                // Есть контент — показываем миниатюру
+            if (preview.previewUrl.isNotBlank()) {
+                // Есть изображение — показываем миниатюру
                 empty.visibility = View.GONE
                 thumb.visibility = View.VISIBLE
                 info.text = preview.fileName
 
-                // Для изображений загружаем через прокси (обход блокировки)
-                val imageUrl = if (preview.mediaUrl.contains("firebasestorage.googleapis.com")) {
-                    val encoded = java.net.URLEncoder.encode(preview.mediaUrl, "UTF-8")
-                    "https://teliki-signage.vercel.app/api?media=$encoded"
-                } else {
-                    preview.mediaUrl
-                }
-
-                if (preview.mediaType == "video") {
-                    // Для видео показываем иконку 🎬
-                    thumb.visibility = View.GONE
-                    empty.visibility = View.VISIBLE
-                    empty.text = "🎬"
-                    info.text = "Видео: ${preview.fileName}"
-                } else {
-                    Glide.with(this)
-                        .load(imageUrl)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .centerCrop()
-                        .error(R.color.black)
-                        .into(thumb)
-                }
+                Glide.with(this)
+                    .load(preview.previewUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .centerCrop()
+                    .error(R.color.black)
+                    .into(thumb)
+            } else if (preview.isVideo) {
+                // Видео — показываем иконку
+                thumb.visibility = View.GONE
+                empty.visibility = View.VISIBLE
+                empty.text = "🎬"
+                info.text = "Видео: ${preview.fileName}"
+            } else if (preview.fileName.isNotBlank()) {
+                // Файл есть, но не удалось получить превью
+                thumb.visibility = View.GONE
+                empty.visibility = View.VISIBLE
+                empty.text = "📄"
+                info.text = preview.fileName
             } else {
                 // Пусто
                 thumb.visibility = View.GONE
@@ -280,7 +312,7 @@ class SetupActivity : AppCompatActivity() {
             // Клик — выбор экрана
             card.setOnClickListener {
                 selectedSlot = preview.slot
-                log("✅ Выбран экран ${preview.slot}")
+                log("✅ Выбран: ${preview.screenName} (слот ${preview.slot})")
                 // Обновляем рамки
                 for (i in 0 until grid.childCount) {
                     grid.getChildAt(i).findViewById<View>(R.id.screenSelected).visibility = View.GONE
@@ -303,7 +335,7 @@ class SetupActivity : AppCompatActivity() {
 
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
-            val loc = selectedLocation ?: run {
+            val locName = selectedLocationName ?: run {
                 Toast.makeText(this, "Выберите кофейню", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -311,9 +343,20 @@ class SetupActivity : AppCompatActivity() {
                 Toast.makeText(this, "Выберите экран", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            prefsManager.save(locationId = loc.id, locationName = loc.name, slotNumber = selectedSlot)
-            log("💾 Сохранено: ${loc.name}, экран $selectedSlot")
-            Log.i(TAG, "Saved: ${loc.name} (${loc.id}), slot=$selectedSlot")
+
+            // Находим выбранный экран для получения полного пути
+            val selectedScreen = screenPreviews.firstOrNull { it.slot == selectedSlot }
+            val diskPath = selectedScreen?.diskPath ?: "$ROOT_FOLDER/$locName/Экран $selectedSlot"
+
+            prefsManager.save(
+                locationId = locName,
+                locationName = locName,
+                slotNumber = selectedSlot,
+                diskPath = diskPath
+            )
+            log("💾 Сохранено: $locName, экран $selectedSlot")
+            log("💾 Путь: $diskPath")
+            Log.i(TAG, "Saved: $locName, slot=$selectedSlot, path=$diskPath")
             launchPlayer()
         }
     }

@@ -9,3 +9,9 @@ android-tv-app/app/build/
 android-tv-app/.gradle/
 android-tv-app/local.properties
 functions/node_modules/
+
+# Секреты — НИКОГДА не пушить
+.credentials/
+docs/credentials/
+*.secret
+*.token

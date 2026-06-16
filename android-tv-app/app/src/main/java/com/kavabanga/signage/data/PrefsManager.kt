@@ -10,6 +10,7 @@ class PrefsManager(context: Context) {
         private const val KEY_LOCATION_ID = "location_id"
         private const val KEY_LOCATION_NAME = "location_name"
         private const val KEY_SLOT_NUMBER = "slot_number"
+        private const val KEY_DISK_PATH = "disk_path"
         private const val KEY_LAST_SYNC = "last_sync_time"
 
         @Volatile
@@ -25,12 +26,17 @@ class PrefsManager(context: Context) {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun save(locationId: String, locationName: String, slotNumber: Int) {
+    fun save(locationId: String, locationName: String, slotNumber: Int, diskPath: String = "") {
         prefs.edit()
             .putString(KEY_LOCATION_ID, locationId)
             .putString(KEY_LOCATION_NAME, locationName)
             .putInt(KEY_SLOT_NUMBER, slotNumber)
+            .putString(KEY_DISK_PATH, diskPath)
             .apply()
+    }
+
+    fun getDiskPath(): String {
+        return prefs.getString(KEY_DISK_PATH, "") ?: ""
     }
 
     fun getLocationId(): String? {
