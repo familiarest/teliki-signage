@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teliki — Расписание</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0f0f1a;
+    color: #e4e4f0;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .container { max-width: 480px; margin: 0 auto; }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #7c5cfc, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .selector {
+    background: #1a1a2e;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a2a40;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #9898b0;
+    margin-bottom: 8px;
+  }
+
+  select, input[type="time"] {
+    width: 100%;
+    padding: 12px 14px;
+    background: #12121f;
+    border: 1px solid #2a2a40;
+    border-radius: 10px;
+    color: #e4e4f0;
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239898b0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+  select:focus, input:focus { outline: none; border-color: #7c5cfc; }
+
+  .schedule-card {
+    background: #1a1a2e;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #2a2a40;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .file-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #c084fc;
+    margin-bottom: 12px;
+    word-break: break-all;
+  }
+
+  .time-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .time-row > div { flex: 1; }
+
+  .time-row .dash {
+    flex: 0;
+    color: #9898b0;
+    font-size: 18px;
+    padding-top: 22px;
+  }
+
+  .btn-save {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #7c5cfc, #6d28d9);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .btn-save:active { transform: scale(0.97); }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    display: none;
+  }
+
+  .status.ok { display: block; background: #0d3320; color: #34d399; border: 1px solid #166534; }
+  .status.err { display: block; background: #3b1111; color: #f87171; border: 1px solid #7f1d1d; }
+  .status.loading { display: block; background: #1e1b4b; color: #a5b4fc; border: 1px solid #312e81; }
+
+  .no-schedule {
+    text-align: center;
+    padding: 32px 16px;
+    color: #6b6b80;
+    font-size: 14px;
+  }
+
+  .hint {
+    text-align: center;
+    color: #6b6b80;
+    font-size: 12px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>☕ Teliki Расписание</h1>
+
+  <div class="selector">
+    <label>Кофейня</label>
+    <select id="selLocation" onchange="onLocationChange()">
+      <option value="">Загрузка...</option>
+    </select>
+  </div>
+
+  <div class="selector">
+    <label>Экран</label>
+    <select id="selScreen" onchange="onScreenChange()">
+      <option value="">Сначала выбери кофейню</option>
+    </select>
+  </div>
+
+  <div id="scheduleArea"></div>
+
+  <button class="btn-save" id="btnSave" onclick="saveSchedule()" disabled>💾 Сохранить расписание</button>
+
+  <div id="status" class="status"></div>
+  <div class="hint">Приложение подхватит расписание в течение 5 минут</div>
+</div>
+
+<script>
+const TOKEN = 'y0__wgBELGZqPQEGNDcQyCZu975FzDIisPzB5AJqrhJ_j16EutHF5ZemN-VaYjb';
+const API = 'https://cloud-api.yandex.net/v1/disk';
+const ROOT = 'disk:/Teliki';
+
+let currentFiles = [];
+let currentPath = '';
+
+async function apiGet(path) {
+  const url = `${API}/resources?path=${encodeURIComponent(path)}&limit=100&sort=name`;
+  const r = await fetch(url, { headers: { 'Authorization': `OAuth ${TOKEN}` } });
+  return r.json();
+}
+
+async function apiUpload(path, content) {
+  const url = `${API}/resources/upload?path=${encodeURIComponent(path)}&overwrite=true`;
+  const r = await fetch(url, { headers: { 'Authorization': `OAuth ${TOKEN}` } });
+  const data = await r.json();
+  await fetch(data.href, { method: 'PUT', body: content });
+}
+
+async function apiDownloadText(path) {
+  const url = `${API}/resources/download?path=${encodeURIComponent(path)}`;
+  const r = await fetch(url, { headers: { 'Authorization': `OAuth ${TOKEN}` } });
+  const data = await r.json();
+  const r2 = await fetch(data.href);
+  return r2.text();
+}
+
+// Загрузка кофеен
+async function init() {
+  try {
+    const data = await apiGet(ROOT);
+    const items = data._embedded?.items?.filter(i => i.type === 'dir') || [];
+    const sel = document.getElementById('selLocation');
+    sel.innerHTML = '<option value="">— Выбери кофейню —</option>';
+    items.forEach(i => {
+      sel.innerHTML += `<option value="${i.path}">${i.name}</option>`;
+    });
+  } catch (e) {
+    showStatus('Ошибка загрузки: ' + e.message, 'err');
+  }
+}
+
+async function onLocationChange() {
+  const path = document.getElementById('selLocation').value;
+  const sel = document.getElementById('selScreen');
+  document.getElementById('scheduleArea').innerHTML = '';
+  document.getElementById('btnSave').disabled = true;
+
+  if (!path) { sel.innerHTML = '<option value="">Сначала выбери кофейню</option>'; return; }
+
+  sel.innerHTML = '<option value="">Загрузка...</option>';
+  const data = await apiGet(path);
+  const screens = data._embedded?.items?.filter(i => i.type === 'dir') || [];
+  sel.innerHTML = '<option value="">— Выбери экран —</option>';
+  screens.forEach(i => {
+    sel.innerHTML += `<option value="${i.path}">${i.name}</option>`;
+  });
+}
+
+async function onScreenChange() {
+  const path = document.getElementById('selScreen').value;
+  const area = document.getElementById('scheduleArea');
+  document.getElementById('btnSave').disabled = true;
+
+  if (!path) { area.innerHTML = ''; return; }
+
+  currentPath = path;
+  area.innerHTML = '<div class="no-schedule">Загрузка файлов...</div>';
+
+  const data = await apiGet(path);
+  const items = data._embedded?.items?.filter(i => i.type === 'file') || [];
+  currentFiles = items.filter(i => i.name !== 'schedule.json');
+
+  if (currentFiles.length === 0) {
+    area.innerHTML = '<div class="no-schedule">📭 В папке нет файлов.<br>Сначала загрузи фото/видео в Яндекс Диск.</div>';
+    return;
+  }
+
+  // Попробуем загрузить существующее расписание
+  let existing = {};
+  const scheduleFile = items.find(i => i.name === 'schedule.json');
+  if (scheduleFile) {
+    try {
+      const json = await apiDownloadText(scheduleFile.path);
+      const parsed = JSON.parse(json);
+      (parsed.items || []).forEach(si => { existing[si.file] = si; });
+    } catch (e) { console.warn('No existing schedule'); }
+  }
+
+  // Строим карточки
+  let html = '';
+  currentFiles.forEach(f => {
+    const ex = existing[f.name];
+    const startVal = ex ? ex.start : '';
+    const endVal = ex ? ex.end : '';
+    const icon = isVideo(f.name) ? '🎬' : '🖼';
+    html += `
+      <div class="schedule-card" data-file="${f.name}">
+        <div class="file-name">${icon} ${f.name}</div>
+        <div class="time-row">
+          <div>
+            <label>С</label>
+            <input type="time" class="time-start" value="${startVal}">
+          </div>
+          <div class="dash">→</div>
+          <div>
+            <label>До</label>
+            <input type="time" class="time-end" value="${endVal}">
+          </div>
+        </div>
+      </div>`;
+  });
+
+  area.innerHTML = html;
+  document.getElementById('btnSave').disabled = false;
+}
+
+async function saveSchedule() {
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  showStatus('Сохраняю...', 'loading');
+
+  const cards = document.querySelectorAll('.schedule-card');
+  const items = [];
+
+  cards.forEach(card => {
+    const file = card.dataset.file;
+    const start = card.querySelector('.time-start').value;
+    const end = card.querySelector('.time-end').value;
+    if (start && end) {
+      items.push({ file, start, end });
+    }
+  });
+
+  if (items.length === 0) {
+    showStatus('Укажи время хотя бы для одного файла', 'err');
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    const json = JSON.stringify({ items }, null, 2);
+    await apiUpload(currentPath + '/schedule.json', json);
+    showStatus('✅ Расписание сохранено!', 'ok');
+  } catch (e) {
+    showStatus('❌ Ошибка: ' + e.message, 'err');
+  }
+
+  btn.disabled = false;
+}
+
+function isVideo(name) {
+  return /\.(mp4|mov|webm|mkv|avi)$/i.test(name);
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+}
+
+init();
+</script>
+</body>
+</html>
